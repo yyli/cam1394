@@ -321,7 +321,7 @@ int camera::getVideoMode(const char* mode, dc1394video_mode_t *video_mode)
 void camera::convertBayer(const char* bayer, const char* method)
 {
 	bayer_met = (dc1394bayer_method_t)-1;
-//	bayer_met = DC1394_BAYER_METHOD_SIMPLE;
+//	bayer_met = DC1394_BAYER_METHOD_NEAREST;
 //	bayer_pat = DC1394_COLOR_FILTER_GRBG;
 	bayer_pat = DC1394_COLOR_FILTER_BGGR;
 }
@@ -487,13 +487,13 @@ cv::Mat camera::read()
 		cv::Mat final(H, W, CV_8UC3, end.image);
 		final.copyTo(ret);
 	} else {
-		cv::Mat final(H, W, CV_8UC3, prev_frame->image);
+		cv::Mat final(H, W, CV_8UC1, prev_frame->image);
 		final.copyTo(ret);
 	}
 
 	timestamp = prev_frame->timestamp;
-	free(prev_frame);
 	free(end.image);
+	free(prev_frame);
 	return ret;
 }
 
