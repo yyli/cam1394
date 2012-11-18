@@ -1,1 +1,5 @@
 Standalone cam1394 driver repo
+
+REQUIREMENTS:
+doxygen
+graphviz

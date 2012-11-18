@@ -77,13 +77,51 @@ namespace cam1394
 		 * \return 0 if success, <0 if failure
 		 */
 		int setBrightness(unsigned int brightness);
-		int setExposure(unsigned int);
-		int setShutter(int);
-		int setGain(int);
-		int setTrigger(int);
-		int setWhiteBalance(unsigned int, unsigned int);
+
+		/*!\brief Sets the exposure of the camera
+		 * \param exposure exposure value
+		 * \return 0 if success, <0 if failure
+		 */
+		int setExposure(unsigned int exposure);
+
+		/*!\brief Sets the shutter speed
+		 * \param shutter shutter value in hz, if <0 then auto shutter
+		 * \return 0 if success, <0 if failure
+		 */
+		int setShutter(int shutter);
+
+		/*!\brief Sets the gain value of the camera
+		 * \param gain gain value, if <0 then auto gain
+		 * \return 0 if success, <0 if failure
+		 */
+		int setGain(int gain);
+
+		/*!\brief Sets the trigger of the camera
+		 * \param trigger_in 0 to disable trigger, 1 to enable trigger
+		 * \return 0 if success, <0 if failure
+		 */
+		int setTrigger(int trigger_in);
+
+		/*!\brief Sets the the white balence
+		 * \param b_u blue value (0-255)
+		 * \param r_v red value (0-255)
+		 * \return 0 if success, <0 if failure
+		 */
+		int setWhiteBalance(unsigned int b_u, unsigned int r_v);
+
+		/*!\brief gets the timestamp of the last frame
+		 * \return timestamp in milliseconds (ms)
+		 */
 		long getTimestamp();
+
+		/*!\brief gets the number of dropped frames for the last frame
+		 * \return number of dropped frames
+		 */
 		int getNumDroppedFrames();
+
+		/*!\brief gets the GUID of attached camera
+		 * \return a long with the GUID, convert to HEX to input into camera::open()
+		 */
 		long getGUID();
 
 	private:

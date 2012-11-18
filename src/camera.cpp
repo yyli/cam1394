@@ -320,7 +320,8 @@ int camera::getVideoMode(const char* mode, dc1394video_mode_t *video_mode)
 
 void camera::convertBayer(const char* bayer, const char* method)
 {
-	bayer_met = DC1394_BAYER_METHOD_SIMPLE;
+	bayer_met = (dc1394bayer_method_t)-1;
+//	bayer_met = DC1394_BAYER_METHOD_SIMPLE;
 //	bayer_pat = DC1394_COLOR_FILTER_GRBG;
 	bayer_pat = DC1394_COLOR_FILTER_BGGR;
 }
@@ -475,14 +476,21 @@ cv::Mat camera::read()
 	}
 	droppedframes = frames_read - 1;
 	prev_frame->color_filter= bayer_pat;
-	if (DC1394_SUCCESS != dc1394_debayer_frames(prev_frame, &end, bayer_met))
-	{
-		fprintf(stderr, "Unable to debayer frame\n");
+
+	cv::Mat ret;
+	if (bayer_met != -1) {
+		if (DC1394_SUCCESS != dc1394_debayer_frames(prev_frame, &end, bayer_met))
+		{
+			fprintf(stderr, "Unable to debayer frame\n");
+		}
+
+		cv::Mat final(H, W, CV_8UC3, end.image);
+		final.copyTo(ret);
+	} else {
+		cv::Mat final(H, W, CV_8UC3, prev_frame->image);
+		final.copyTo(ret);
 	}
 
-	cv::Mat final(H, W, CV_8UC3, end.image);
-	cv::Mat ret;
-	final.copyTo(ret);
 	timestamp = prev_frame->timestamp;
 	free(prev_frame);
 	free(end.image);
