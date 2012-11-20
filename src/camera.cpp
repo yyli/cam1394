@@ -201,7 +201,7 @@ int camera::convertVideoMode(const char* mode, dc1394video_mode_t *video_mode)
 
 /* Checks if the input video mode is a valid video mode */
 int camera::checkValidVideoMode(dc1394video_mode_t *mode) {
-	if (mode != NULL)
+	if (mode == NULL)
 		return -1;
 	else if (*mode < DC1394_VIDEO_MODE_MIN || *mode > DC1394_VIDEO_MODE_MAX)
 		return -1;
@@ -289,6 +289,10 @@ int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
 		return -1;
 	else if (*frame_rate < DC1394_FRAMERATE_MIN || *frame_rate > DC1394_FRAMERATE_MAX)
 		return -1;
+	else if (_video_mode < DC1394_VIDEO_MODE_MIN || _video_mode > DC1394_VIDEO_MODE_MAX) {
+		fprintf(stderr, "ERROR: Haven't set video mode yet\n");
+		return -1;
+	}
 
 	dc1394error_t err;
 	dc1394framerates_t rates;

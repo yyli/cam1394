@@ -17,14 +17,16 @@ all: example
 # EXECUTABLES FILES HERE:
 
 example: src/example.cpp $(BUILDDIR)/camera.o
-	mkdir -p build
-	$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
+	@echo "CC [$@]"
+	@mkdir -p build
+	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
 
 # OBJECT FILES HERE:
 
 $(BUILDDIR)/camera.o: src/camera.cpp
-	mkdir -p build
-	$(CXX) $? -c -o $@ $(CXXFLAGS)
+	@echo "CC [$@]"
+	@mkdir -p build
+	@$(CXX) $? -c -o $@ $(CXXFLAGS)
 
 doxygen: 
 	doxygen doxygen/Doxyfile
