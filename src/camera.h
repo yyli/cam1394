@@ -134,6 +134,10 @@ namespace cam1394
 		 */
 		void printConnectedCams();
 
+		/*!\brief prints the GUID of attached camera
+		 */
+		long getGUID();
+
 	private:
 		long guid;
 		int width;

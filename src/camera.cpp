@@ -564,3 +564,7 @@ void camera::printGUID()
 {
 	printf("GUID of attached camera is: %016lX\n", guid);
 }
+
+long camera::getGUID() {
+	return guid;
+}
