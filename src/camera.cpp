@@ -276,7 +276,10 @@ int camera::convertFrameRate(float fps, dc1394framerate_t *frame_rate) {
 	else
 		*frame_rate = DC1394_FRAMERATE_240;
 
-	return 1;
+	if (checkValidFrameRate(frame_rate) < 0)
+		return 1;
+	else
+		return -1;
 }
 
 int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
@@ -311,7 +314,7 @@ void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
 	if (err != DC1394_SUCCESS) 
 		fprintf(stderr, "ERROR getting supported framerates");
 	else {
-		printf("Print Supported frame rates for video mode: %s\n", videoModeNames[_video_mode - STARTVIDEOMODE]);
+		printf("Print Supported frame rates for video mode: %s\n", videoModeNames[mode - STARTVIDEOMODE]);
 		for (unsigned int i = 0; i < rates.num; i++) {
 			printf("    FPS %d: [%d] %d\n", i, rates.framerates[i], videoFrameRates[rates.framerates[i] - STARTFRAMERATE]);
 		}
