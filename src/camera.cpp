@@ -15,112 +15,37 @@
 //along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "camera.h"
 #include <stdio.h>
+#include <cassert>
 #include "highgui.h"
+
+#include "camera.h"
+#include "cameraconstants.h"
 
 using namespace cam1394;
 
-//! \internal
-const int STARTVIDEOMODE = DC1394_VIDEO_MODE_MIN;
-
-//! \hideinitializer
-const int videoWidths[] = {
-	160,
-	320,
-	640,
-	640,
-	640,
-	640,
-	640,
-	800,
-	800,
-	800,
-	1024,
-	1024,
-	1024,
-	800,
-	1024,
-	1280,
-	1280,
-	1280,
-	1600,
-	1600,
-	1600,
-	1280,
-	1600
-};
-
-//! \hideinitializer
-const int videoHeights[] = {
-	120,
-	240,
-	480,
-	480,
-	480,
-	480,
-	480,
-	600,
-	600,
-	600,
-	768,
-	768,
-	768,
-	600,
-	768,
-	960,
-	960,
-	960,
-	1200,
-	1200,
-	1200,
-	960,
-	1200
-};
-
-//! \showinitializer
-const char *videoModeNames[] = {
-	"160x120_YUV444",
-	"320x240_YUV422",
-	"640x480_YUV411",
-	"640x480_YUV422",
-	"640x480_RGB8",
-	"640x480_MONO8",
-	"640x480_MONO16",
-	"800x600_YUV422",
-	"800x600_RGB8",
-	"800x600_MONO8",
-	"1024x768_YUV422",
-	"1024x768_RGB8",
-	"1024x768_MONO8",
-	"800x600_MONO16",
-	"1024x768_MONO16",
-	"1280x960_YUV422",
-	"1280x960_RGB8",
-	"1280x960_MONO8",
-	"1600x1200_YUV422",
-	"1600x1200_RGB8",
-	"1600x1200_MONO8",
-	"1280x960_MONO16",
-	"1600x1200_MONO16",
-	"EXIF",
-	"FORMAT7_0",
-	"FORMAT7_1",
-	"FORMAT7_2",
-	"FORMAT7_3",
-	"FORMAT7_4",
-	"FORMAT7_5",
-	"FORMAT7_6",
-	"FORMAT7_7"
-};
-
 /* defualt constructor */
-camera::camera() : width(-1), height(-1), cam(NULL) {}
+camera::camera() : guid(0), width(-1), height(-1), cam(NULL) {}
 
 /* destructor */
 camera::~camera()
 {
 	clean_up();
+}
+
+int camera::open() {
+	dc1394video_mode_t mode = DC1394_VIDEO_MODE_MIN;
+	dc1394framerate_t rate = DC1394_FRAMERATE_MIN;
+
+	if (getBestVideoMode(&mode) < 0) {
+		return -1;
+	} else if (getBestFrameRate(&rate) < 0) {
+		return -1;
+	}
+
+	return open("NONE", videoModeNames[mode - STARTVIDEOMODE], 
+				videoFrameRates[rate - STARTFRAMERATE], 
+				"NONE", "NONE");
 }
 
 int camera::open(const char* cam_guid, const char* video_mode, float fps, const char* bayer, const char* method)
@@ -204,24 +129,26 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 		return -1;
 	}
 	
-	dc1394framerate_t fr = convertFrameRate(fps);
 	dc1394video_mode_t vid_mode;
-	if (getVideoMode(video_mode, &vid_mode) < 0) {
+	if (convertVideoMode(video_mode, &vid_mode) < 0) {
 		printf("ERROR: invalid video mode: %s\n", video_mode);
 		printf("listing possible modes\n");
 		printSupportedVideoModes();
 		return -1;
 	}
 
+	dc1394framerate_t fr; 
+	if (convertFrameRate(fps, &fr) < 0) {
+		return -1;
+	}
+
 	bool Set_Success =  true;
+	if (setVideoMode(vid_mode) < 0) {
+		Set_Success = false;
+	}
 	if (DC1394_SUCCESS != dc1394_video_set_framerate(cam, fr))
 	{
 		fprintf(stderr, "Failed to set the framerate\n");
-		Set_Success = false;
-	}
-	if (DC1394_SUCCESS != dc1394_video_set_mode(cam, vid_mode))
-	{
-		fprintf(stderr, "Failed to set the video mode\n");
 		Set_Success = false;
 	}
 	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT))
@@ -246,6 +173,63 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	return 0;
 }
 
+int camera::getBestVideoMode(dc1394video_mode_t *mode) {
+	return 0;
+}
+
+int camera::getBestFrameRate(dc1394framerate_t *rate) {
+	return 0;
+}
+
+/* Sets video_mode based on string input */
+int camera::convertVideoMode(const char* mode, dc1394video_mode_t *video_mode)
+{
+	for (size_t i = 0; i < 32; i++) {
+		if (!strcmp(mode, videoModeNames[i])) {
+			*video_mode = (dc1394video_mode_t)(i + STARTVIDEOMODE);
+
+			/* if a non-Format 7 mode set width and height */
+			if (i < 23) {
+				width = videoWidths[i];
+				height = videoHeights[i];
+			}
+
+			/* check if it is a valid video */
+			if (checkValidVideoMode(video_mode) < 0)
+				return 1;
+			else
+				return -1;
+		}
+	}
+
+	return -1;
+}
+
+/* Checks if the input video mode is a valid video mode */
+int camera::checkValidVideoMode(dc1394video_mode_t *mode) {
+	if (mode != NULL)
+		return -1;
+	else if (*mode < DC1394_VIDEO_MODE_MIN || *mode > DC1394_VIDEO_MODE_MAX)
+		return -1;
+
+	dc1394error_t err;
+	dc1394video_modes_t modes;
+	
+	/* get all supported video modes for camera*/
+	err = dc1394_video_get_supported_modes(cam, &modes);
+	
+	if (err != DC1394_SUCCESS) 
+		fprintf(stderr, "ERROR getting supported videomodes");
+	else {
+		for (unsigned int i = 0; i < modes.num; i++) {
+			if (*mode == modes.modes[i]) 
+				return 1;
+		}
+	}
+
+	return -1;
+}
+
 /* Prints the supported video modes */
 void camera::printSupportedVideoModes() {
 	dc1394error_t err;
@@ -261,61 +245,75 @@ void camera::printSupportedVideoModes() {
 	}
 }
 
-/* Checks if the input video mode is a valid video mode */
-int camera::checkValidVideoMode(dc1394video_mode_t *mode) {
-	if (*mode == 0)
-		return 0;
+int camera::setVideoMode(dc1394video_mode_t mode) {
+	if (DC1394_SUCCESS != dc1394_video_set_mode(cam, mode))
+	{
+		fprintf(stderr, "Failed to set the video mode\n");
+		return -1;
+	}
+
+	_video_mode = mode;
+	return 0;
+}
+
+int camera::convertFrameRate(float fps, dc1394framerate_t *frame_rate) {
+	if (fps < 3.75)
+		*frame_rate = DC1394_FRAMERATE_1_875;
+	else if (fps < 7.5)
+		*frame_rate = DC1394_FRAMERATE_3_75;
+	else if (fps < 15)
+		*frame_rate = DC1394_FRAMERATE_7_5;
+	else if (fps < 30)
+		*frame_rate = DC1394_FRAMERATE_15;
+	else if (fps < 60)
+		*frame_rate = DC1394_FRAMERATE_30;
+	else if (fps < 120)
+		*frame_rate = DC1394_FRAMERATE_60;
+	else if (fps < 240)
+		*frame_rate = DC1394_FRAMERATE_120;
+	else
+		*frame_rate = DC1394_FRAMERATE_240;
+
+	return 1;
+}
+
+int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
+	if (frame_rate == NULL) 
+		return -1;
+	else if (*frame_rate < DC1394_FRAMERATE_MIN || *frame_rate > DC1394_FRAMERATE_MAX)
+		return -1;
 
 	dc1394error_t err;
-	dc1394video_modes_t modes;
-	
-	err = dc1394_video_get_supported_modes(cam, &modes);
-	if (err != DC1394_SUCCESS) 
-		fprintf(stderr, "ERROR getting supported videomodes");
+	dc1394framerates_t rates;
+
+	err = dc1394_video_get_supported_framerates(cam, _video_mode, &rates);
+
+	if (err != DC1394_SUCCESS)
+		fprintf(stderr, "ERROR getting supported framerates");
 	else {
-		for (unsigned int i = 0; i < modes.num; i++) {
-			if (*mode == modes.modes[i])
+		for (unsigned int i = 0; i < rates.num; i++) {
+			if (*frame_rate == rates.framerates[i]) 
 				return 1;
 		}
 	}
 
-	return 0;
+	return -1;
 }
 
-dc1394framerate_t camera::convertFrameRate(float fps)
-{
-	if (fps < 3.75)
-		return DC1394_FRAMERATE_1_875;
-	else if (fps < 7.5)
-		return DC1394_FRAMERATE_3_75;
-	else if (fps < 15)
-		return DC1394_FRAMERATE_7_5;
-	else if (fps < 30)
-		return DC1394_FRAMERATE_15;
-	else if (fps < 60)
-		return DC1394_FRAMERATE_30;
-	else
-		return DC1394_FRAMERATE_60;
-}
-
-/* Sets video_mode based on string input */
-int camera::getVideoMode(const char* mode, dc1394video_mode_t *video_mode)
-{
-	*video_mode = (dc1394video_mode_t)0;
-	for (size_t i = 0; i < 32; i++) {
-		if (!strcmp(mode, videoModeNames[i])) {
-			*video_mode = (dc1394video_mode_t)(i + STARTVIDEOMODE);
-			if (i < 23) {
-				width = videoWidths[i];
-				height = videoHeights[i];
-			}
+/* Prints the supported frame rates */
+void camera::printSupportedFrameRates() {
+	dc1394error_t err;
+	dc1394framerates_t rates;
+	err = dc1394_video_get_supported_framerates(cam, _video_mode, &rates);
+	
+	if (err != DC1394_SUCCESS) 
+		fprintf(stderr, "ERROR getting supported framerates");
+	else {
+		printf("Print Supported frame rates for video mode: %s\n", videoModeNames[_video_mode - STARTVIDEOMODE]);
+		for (unsigned int i = 0; i < rates.num; i++) {
+			printf("FPS %d: [%d] %d\n", i, rates.framerates[i], videoFrameRates[rates.framerates[i] - STARTFRAMERATE]);
 		}
 	}
-
-	if (checkValidVideoMode(video_mode))
-		return 1;
-	else
-		return -1;
 }
 
 void camera::convertBayer(const char* bayer, const char* method)
@@ -507,7 +505,7 @@ int camera::getNumDroppedFrames()
 	return droppedframes;
 }
 
-long camera::getGUID()
+void camera::printGUID()
 {
-	return guid;
+	printf("GUID of attached camera is: %lX\n", guid);
 }

@@ -12,7 +12,7 @@ BUILDDIR=build
 
 .PHONY: all clean doxygen
 
-all: camera example
+all: example
 
 # EXECUTABLES FILES HERE:
 
@@ -22,9 +22,9 @@ example: src/example.cpp $(BUILDDIR)/camera.o
 
 # OBJECT FILES HERE:
 
-camera: src/camera.cpp
+$(BUILDDIR)/camera.o: src/camera.cpp
 	mkdir -p build
-	$(CXX) $? -c -o $(BUILDDIR)/$@.o $(CXXFLAGS)
+	$(CXX) $? -c -o $@ $(CXXFLAGS)
 
 doxygen: 
 	doxygen doxygen/Doxyfile

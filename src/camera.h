@@ -41,12 +41,19 @@ namespace cam1394
 
 		//! Destroys a camera object
 		~camera();
-		
+				
+		/*!\brief Opens an interface to the camera with the 
+		 * largest resolution and the fastest possible frame rate 
+		 * with no debayering
+		 * \return 1 if success, <0 if failure
+		 */
+		int open();
+
 		/*!\brief Opens an interface to the camera
 		 * \param cam_guid		NONE will pick the first available camera, 
-		 * 						else use the GUID returned by #getGUID
+		 * 						else use the GUID printed by #printGUID
 		 * \param video_mode	This is a string from one of the following 
-		 * 						\link camera.cpp::videoModeNames \endlink
+		 * 						\link cameraconstants.h::videoModeNames \endlink
 		 * \param fps			FPS value, floored to closest possible FPS
 		 * \param bayer 		CURRENTLY THIS DOES NOTHING
 		 * \param method 		CURRENTLY THIS DOES NOTHING
@@ -119,10 +126,9 @@ namespace cam1394
 		 */
 		int getNumDroppedFrames();
 
-		/*!\brief gets the GUID of attached camera
-		 * \return a long with the GUID, convert to HEX to input into camera::open()
+		/*!\brief prints the GUID of attached camera
 		 */
-		long getGUID();
+		void printGUID();
 
 	private:
 		long guid;
@@ -131,14 +137,22 @@ namespace cam1394
 		dc1394camera_t* cam;
 		dc1394color_filter_t bayer_pat;
 		dc1394bayer_method_t bayer_met;
+		dc1394video_mode_t _video_mode;
 		
 		long timestamp;
 		int droppedframes;
 
-		dc1394framerate_t convertFrameRate(float);
-		int getVideoMode(const char*, dc1394video_mode_t*);
+		int getBestVideoMode(dc1394video_mode_t*);
+		int getBestFrameRate(dc1394framerate_t*);
+
+		int convertVideoMode(const char*, dc1394video_mode_t*);
 		int checkValidVideoMode(dc1394video_mode_t*);
 		void printSupportedVideoModes();
+		int setVideoMode(dc1394video_mode_t);
+
+		int convertFrameRate(float, dc1394framerate_t*);
+		int checkValidFrameRate(dc1394framerate_t* frame_rate);
+		void printSupportedFrameRates();
 
 		void convertBayer(const char*, const char*);
 		void clean_up();
