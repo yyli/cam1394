@@ -128,24 +128,18 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 		}
 		return -1;
 	}
-	
-	dc1394video_mode_t vid_mode;
-	if (convertVideoMode(video_mode, &vid_mode) < 0) {
-		printf("ERROR: invalid video mode: %s\n", video_mode);
-		printSupportedVideoModes();
-		return -1;
-	}
 
+	bool Set_Success =  true;
+	if (setVideoMode(video_mode) < 0) {
+		Set_Success = false;
+	}
+	
 	dc1394framerate_t fr; 
 	if (convertFrameRate(fps, &fr) < 0) {
 		printSupportedFrameRates(_video_mode);
 		return -1;
 	}
 
-	bool Set_Success =  true;
-	if (setVideoMode(vid_mode) < 0) {
-		Set_Success = false;
-	}
 	if (DC1394_SUCCESS != dc1394_video_set_framerate(cam, fr))
 	{
 		fprintf(stderr, "Failed to set the framerate\n");
@@ -248,7 +242,14 @@ void camera::printSupportedVideoModes() {
 	}
 }
 
-int camera::setVideoMode(dc1394video_mode_t mode) {
+int camera::setVideoMode(const char* video_mode) {
+	dc1394video_mode_t mode;
+	if (convertVideoMode(video_mode, &mode) < 0) {
+		printf("ERROR: invalid video mode: %s\n", video_mode);
+		printSupportedVideoModes();
+		return -1;
+	}
+
 	if (DC1394_SUCCESS != dc1394_video_set_mode(cam, mode))
 	{
 		fprintf(stderr, "Failed to set the video mode\n");

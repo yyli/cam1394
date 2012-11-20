@@ -148,7 +148,7 @@ namespace cam1394
 		int convertVideoMode(const char*, dc1394video_mode_t*);
 		int checkValidVideoMode(dc1394video_mode_t*);
 		void printSupportedVideoModes();
-		int setVideoMode(dc1394video_mode_t);
+		int setVideoMode(const char*);
 
 		int convertFrameRate(float, dc1394framerate_t*);
 		int checkValidFrameRate(dc1394framerate_t* frame_rate);
