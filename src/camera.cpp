@@ -129,16 +129,17 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 		return -1;
 	}
 
+	bool Set_Success =  true;
+	if (setVideoMode(video_mode) < 0) {
+		Set_Success = false;
+	}
+	
 	dc1394framerate_t fr; 
 	if (convertFrameRate(fps, &fr) < 0) {
 		printSupportedFrameRates(_video_mode);
 		return -1;
 	}
 
-	bool Set_Success =  true;
-	if (setVideoMode(video_mode) < 0) {
-		Set_Success = false;
-	}
 	if (DC1394_SUCCESS != dc1394_video_set_framerate(cam, fr))
 	{
 		fprintf(stderr, "Failed to set the framerate\n");
