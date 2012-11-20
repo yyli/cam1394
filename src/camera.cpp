@@ -114,28 +114,17 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	}
 	
 	char* temp = (char*)malloc(1024*sizeof(char));
-	uint32_t value[3];
 
 	for(unsigned int i=0; i < list->num; i++)
 	{
-		cam = dc1394_camera_new(d, list->ids[i].guid);
-		if (!cam) {
-			fprintf(stderr, "failed to initliaze camera with GUID %lX\n", list->ids[i].guid);
-			continue;
-		}
-		
-		value[0] = cam->guid & 0xFFFFFFFF;
-		value[1] = (cam->guid >> 32) & 0x000000FF;
-		value[2] = (cam->guid >> 40) & 0xFFFFF;
-
-		sprintf(temp,"%06X%02X%08X", value[2], value[1], value[0]);
+		sprintf(temp,"%016lX", list->ids[i].guid);
 
 		if (!strcasecmp(cam_guid, "NONE"))
 		{
 //#ifdef DEBUGCAMERA
 			fprintf(stderr, "WARNING: No guid specified, using first camera. GUID: %s\n", temp);
 //#endif
-			guid = value[0] | ((uint64_t)value[1] << 32) | ((uint64_t)value[2] << 40);
+			guid = list->ids[i].guid;
 			break;
 		}
 
@@ -144,12 +133,18 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 #ifdef DEBUGCAMERA
 			fprintf(stderr, "Camera %s found\n", cam_guid);
 #endif
-			guid = value[0] | ((uint64_t)value[1] << 32) | ((uint64_t)value[2] << 40);
+			guid = list->ids[i].guid;
 			break;
 		}
-		puts("cleaned_up");
-		clean_up();
 	}
+
+	cam = dc1394_camera_new(d, guid);
+	if (!cam) {
+		fprintf(stderr, "failed to initliaze camera with GUID %016lX\n", guid);
+		clean_up();
+		return -1;
+	}
+		
 	free(temp);
 	dc1394_camera_free_list(list);
 	
