@@ -309,8 +309,10 @@ int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
 
 /* Prints the supported frame rates */
 void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
-	if (mode < DC1394_VIDEO_MODE_MIN || mode > DC1394_VIDEO_MODE_MAX)
-		return -1;
+	if (mode < DC1394_VIDEO_MODE_MIN || mode > DC1394_VIDEO_MODE_MAX) {
+		fprintf(stderr, "ERROR: Invalid video mode, can't get frame rates");
+		return;
+	}
 
 	dc1394error_t err;
 	dc1394framerates_t rates;
