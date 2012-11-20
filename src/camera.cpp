@@ -133,7 +133,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	if (setVideoMode(video_mode) < 0) {
 		Set_Success = false;
 	}
-	
+
 	dc1394framerate_t fr; 
 	if (convertFrameRate(fps, &fr) < 0) {
 		printSupportedFrameRates(_video_mode);
@@ -190,9 +190,9 @@ int camera::convertVideoMode(const char* mode, dc1394video_mode_t *video_mode)
 
 			/* check if it is a valid video */
 			if (checkValidVideoMode(video_mode) < 0)
-				return 1;
-			else
 				return -1;
+			else
+				return 1;
 		}
 	}
 
@@ -279,9 +279,9 @@ int camera::convertFrameRate(float fps, dc1394framerate_t *frame_rate) {
 		*frame_rate = DC1394_FRAMERATE_240;
 
 	if (checkValidFrameRate(frame_rate) < 0)
-		return 1;
-	else
 		return -1;
+	else
+		return 1;
 }
 
 int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
@@ -309,6 +309,9 @@ int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
 
 /* Prints the supported frame rates */
 void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
+	if (mode < DC1394_VIDEO_MODE_MIN || mode > DC1394_VIDEO_MODE_MAX)
+		return -1;
+
 	dc1394error_t err;
 	dc1394framerates_t rates;
 	err = dc1394_video_get_supported_framerates(cam, mode, &rates);
