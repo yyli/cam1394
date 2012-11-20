@@ -98,7 +98,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 //#ifdef DEBUGCAMERA
 			fprintf(stderr, "WARNING: No guid specified, using first camera. GUID: %s\n", temp);
 //#endif
-			guid = value[0] | ((long)value[1] << 32) | ((long)value[2] << 40);
+			guid = value[0] | ((uint64_t)value[1] << 32) | ((uint64_t)value[2] << 40);
 			break;
 		}
 
@@ -107,7 +107,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 #ifdef DEBUGCAMERA
 			fprintf(stderr, "Camera %s found\n", cam_guid);
 #endif
-			guid = value[0] | ((long)value[1] << 32) | ((long)value[2] << 40);
+			guid = value[0] | ((uint64_t)value[1] << 32) | ((uint64_t)value[2] << 40);
 			break;
 		}
 		puts("cleaned_up");
@@ -132,13 +132,13 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	dc1394video_mode_t vid_mode;
 	if (convertVideoMode(video_mode, &vid_mode) < 0) {
 		printf("ERROR: invalid video mode: %s\n", video_mode);
-		printf("listing possible modes\n");
 		printSupportedVideoModes();
 		return -1;
 	}
 
 	dc1394framerate_t fr; 
 	if (convertFrameRate(fps, &fr) < 0) {
+		printSupportedFrameRates(_video_mode);
 		return -1;
 	}
 
@@ -217,7 +217,7 @@ int camera::checkValidVideoMode(dc1394video_mode_t *mode) {
 	
 	/* get all supported video modes for camera*/
 	err = dc1394_video_get_supported_modes(cam, &modes);
-	
+
 	if (err != DC1394_SUCCESS) 
 		fprintf(stderr, "ERROR getting supported videomodes");
 	else {
@@ -239,8 +239,10 @@ void camera::printSupportedVideoModes() {
 	if (err != DC1394_SUCCESS) 
 		fprintf(stderr, "ERROR getting supported videomodes");
 	else {
+		printf("listing possible video modes\n");
 		for (unsigned int i = 0; i < modes.num; i++) {
-			printf("mode %d: [%d] %s\n", i, modes.modes[i], videoModeNames[modes.modes[i] - STARTVIDEOMODE]);
+			printf("mode %d: [%d] %s:\n", i, modes.modes[i], videoModeNames[modes.modes[i] - STARTVIDEOMODE]);
+			printSupportedFrameRates(modes.modes[i]);
 		}
 	}
 }
@@ -301,17 +303,17 @@ int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
 }
 
 /* Prints the supported frame rates */
-void camera::printSupportedFrameRates() {
+void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
 	dc1394error_t err;
 	dc1394framerates_t rates;
-	err = dc1394_video_get_supported_framerates(cam, _video_mode, &rates);
+	err = dc1394_video_get_supported_framerates(cam, mode, &rates);
 	
 	if (err != DC1394_SUCCESS) 
 		fprintf(stderr, "ERROR getting supported framerates");
 	else {
 		printf("Print Supported frame rates for video mode: %s\n", videoModeNames[_video_mode - STARTVIDEOMODE]);
 		for (unsigned int i = 0; i < rates.num; i++) {
-			printf("FPS %d: [%d] %d\n", i, rates.framerates[i], videoFrameRates[rates.framerates[i] - STARTFRAMERATE]);
+			printf("    FPS %d: [%d] %d\n", i, rates.framerates[i], videoFrameRates[rates.framerates[i] - STARTFRAMERATE]);
 		}
 	}
 }

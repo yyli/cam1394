@@ -152,7 +152,7 @@ namespace cam1394
 
 		int convertFrameRate(float, dc1394framerate_t*);
 		int checkValidFrameRate(dc1394framerate_t* frame_rate);
-		void printSupportedFrameRates();
+		void printSupportedFrameRates(dc1394video_mode_t mode);
 
 		void convertBayer(const char*, const char*);
 		void clean_up();
