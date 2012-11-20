@@ -242,7 +242,8 @@ void camera::printSupportedVideoModes() {
 		printf("listing possible video modes\n");
 		for (unsigned int i = 0; i < modes.num; i++) {
 			printf("mode %d: [%d] %s:\n", i, modes.modes[i], videoModeNames[modes.modes[i] - STARTVIDEOMODE]);
-			printSupportedFrameRates(modes.modes[i]);
+			if (modes.modes[i] < DC1394_VIDEO_MODE_FORMAT7_MIN)
+				printSupportedFrameRates(modes.modes[i]);
 		}
 	}
 }

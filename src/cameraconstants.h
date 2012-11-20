@@ -100,6 +100,7 @@ const int videoFrameRates[] = {
 	7.5,
 	15,
 	30,
+	60,
 	120,
 	240
 };
