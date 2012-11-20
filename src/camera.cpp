@@ -48,6 +48,43 @@ int camera::open() {
 				"NONE", "NONE");
 }
 
+void camera::printConnectedCams() {
+	dc1394error_t err;
+	dc1394camera_list_t *list;
+	dc1394_t *d;
+	
+	d = dc1394_new();
+	if (d == NULL) {
+		fprintf(stderr, "Can't initialize dc1394_content\n");
+		dc1394_camera_free_list(list);
+		dc1394_free(d);
+		return;
+	}
+	
+	err = dc1394_camera_enumerate(d, &list);
+	if (err != DC1394_SUCCESS) {
+		fprintf(stderr, "Could not get camera list\n");
+		dc1394_camera_free_list(list);
+		dc1394_free(d);
+		return;
+	}
+	
+	if (list->num == 0) {
+		printf("No Cameras Found\n");
+		dc1394_camera_free_list(list);
+		dc1394_free(d);
+		return;
+	}
+
+	printf("Connected Cameras\n");	
+	for (unsigned int i = 0; i < list->num; i++) {
+		printf("Cam %d: %016lX\n", i, list->ids[i].guid);
+	}
+	
+	dc1394_camera_free_list(list);
+	dc1394_free(d);
+}
+
 int camera::open(const char* cam_guid, const char* video_mode, float fps, const char* bayer, const char* method)
 {
 	convertBayer(bayer, method);
@@ -91,9 +128,9 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 		value[1] = (cam->guid >> 32) & 0x000000FF;
 		value[2] = (cam->guid >> 40) & 0xFFFFF;
 
-		sprintf(temp,"%06x%02x%08x", value[2], value[1], value[0]);
+		sprintf(temp,"%06X%02X%08X", value[2], value[1], value[0]);
 
-		if (!strcmp(cam_guid, "NONE"))
+		if (!strcasecmp(cam_guid, "NONE"))
 		{
 //#ifdef DEBUGCAMERA
 			fprintf(stderr, "WARNING: No guid specified, using first camera. GUID: %s\n", temp);
@@ -102,7 +139,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 			break;
 		}
 
-		if (!strcmp(temp, cam_guid))
+		if (!strcasecmp(temp, cam_guid))
 		{
 #ifdef DEBUGCAMERA
 			fprintf(stderr, "Camera %s found\n", cam_guid);
@@ -118,7 +155,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	
 	if (!cam)
 	{
-		if (!strcmp(cam_guid, "NONE"))
+		if (!strcasecmp(cam_guid, "NONE"))
 		{
 			fprintf(stderr, "Can't find camera\n");
 		}
@@ -132,19 +169,10 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	bool Set_Success =  true;
 	if (setVideoMode(video_mode) < 0) {
 		Set_Success = false;
-	}
-
-	dc1394framerate_t fr; 
-	if (convertFrameRate(fps, &fr) < 0) {
-		printSupportedFrameRates(_video_mode);
-		return -1;
-	}
-
-	if (DC1394_SUCCESS != dc1394_video_set_framerate(cam, fr))
-	{
-		fprintf(stderr, "Failed to set the framerate\n");
+	} else if (setFrameRate(fps) < 0) {
 		Set_Success = false;
 	}
+
 	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT))
 	{
 		Set_Success = false;	
@@ -163,7 +191,23 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 		fprintf(stderr, "Failed to start camera\n");
 		return -1;	
 	}
-	
+
+	return 0;
+}
+
+int camera::setFrameRate(float fps) {
+	dc1394framerate_t fr; 
+	if (convertFrameRate(fps, &fr) < 0) {
+		printSupportedFrameRates(_video_mode);
+		return -1;
+	}
+
+	if (DC1394_SUCCESS != dc1394_video_set_framerate(cam, fr))
+	{
+		fprintf(stderr, "Failed to set the framerate\n");
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -179,7 +223,7 @@ int camera::getBestFrameRate(dc1394framerate_t *rate) {
 int camera::convertVideoMode(const char* mode, dc1394video_mode_t *video_mode)
 {
 	for (size_t i = 0; i < 32; i++) {
-		if (!strcmp(mode, videoModeNames[i])) {
+		if (!strcasecmp(mode, videoModeNames[i])) {
 			*video_mode = (dc1394video_mode_t)(i + STARTVIDEOMODE);
 
 			/* if a non-Format 7 mode set width and height */
@@ -523,5 +567,5 @@ int camera::getNumDroppedFrames()
 
 void camera::printGUID()
 {
-	printf("GUID of attached camera is: %lX\n", guid);
+	printf("GUID of attached camera is: %016lX\n", guid);
 }

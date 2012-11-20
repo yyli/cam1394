@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -O3 -Wall -Isrc
+CXXFLAGS = -g -Wall -Isrc
 CXXLD = -ldc1394
 
 CXXOPENCVFLAGS = `pkg-config opencv --cflags`

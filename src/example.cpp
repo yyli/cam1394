@@ -10,18 +10,22 @@ using namespace cam1394;
 int main() {
         camera a;
         Mat aimage;
-	Timer camRead;
+		Timer camRead;
 
-        if (a.open("NONE", "640x480_MONO8", 120, NULL, NULL) < 0)
+		a.printConnectedCams();
+
+        if (a.open("00B09D0100AF05C1", "640x480_MONO8", 60, NULL, NULL) < 0)
                 return -1;
+
+		a.printGUID();
 
         int numDropped = 0;
         while (1) {
-		camRead.start();
-                aimage = a.read();
-		camRead.end();
-                numDropped += a.getNumDroppedFrames();
-                cout << camRead.elapsed()*1000 << "ms, " << numDropped << endl;
+			camRead.start();
+			aimage = a.read();
+			camRead.end();
+			numDropped += a.getNumDroppedFrames();
+			cout << camRead.elapsed()*1000 << "ms, " << numDropped << endl;
         }
         return 0;
 }

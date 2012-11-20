@@ -130,6 +130,10 @@ namespace cam1394
 		 */
 		void printGUID();
 
+		/*!\brief prints the GUIDs of connected cameras
+		 */
+		void printConnectedCams();
+
 	private:
 		long guid;
 		int width;
@@ -153,6 +157,7 @@ namespace cam1394
 		int convertFrameRate(float, dc1394framerate_t*);
 		int checkValidFrameRate(dc1394framerate_t* frame_rate);
 		void printSupportedFrameRates(dc1394video_mode_t mode);
+		int setFrameRate(float fps);
 
 		void convertBayer(const char*, const char*);
 		void clean_up();
