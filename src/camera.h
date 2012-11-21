@@ -151,6 +151,8 @@ namespace cam1394
 		long guid;
 		int width;
 		int height;
+		
+		dc1394_t *d;
 		dc1394camera_t* cam;
 		dc1394color_filter_t bayer_pat;
 		dc1394bayer_method_t bayer_met;
@@ -159,8 +161,11 @@ namespace cam1394
 		long timestamp;
 		int droppedframes;
 
+		int initCam(const char* cam_guid);
+		int initParam(const char* video_mode, float fps, const char* method, const char* pattern);
+
 		int getBestVideoMode(dc1394video_mode_t*);
-		int getBestFrameRate(dc1394framerate_t*);
+		int getBestFrameRate(dc1394framerate_t*, dc1394video_mode_t);
 
 		int convertVideoMode(const char*, dc1394video_mode_t*);
 		int checkValidVideoMode(dc1394video_mode_t*);

@@ -34,18 +34,34 @@ camera::~camera()
 }
 
 int camera::open() {
+	if (initCam("NONE") < 0) {
+		return -1;
+	}
+	
 	dc1394video_mode_t mode = DC1394_VIDEO_MODE_MIN;
 	dc1394framerate_t rate = DC1394_FRAMERATE_MIN;
 
 	if (getBestVideoMode(&mode) < 0) {
 		return -1;
-	} else if (getBestFrameRate(&rate) < 0) {
+	} else if (getBestFrameRate(&rate, mode) < 0) {
 		return -1;
 	}
 
-	return open("NONE", videoModeNames[mode - STARTVIDEOMODE], 
-				videoFrameRates[rate - STARTFRAMERATE], 
-				"NONE", "NONE");
+	if (initParam(videoModeNames[mode - STARTVIDEOMODE], 
+				  videoFrameRates[rate - STARTFRAMERATE], NULL, NULL) < 0) {
+		clean_up();
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+		clean_up();
+		fprintf(stderr, "Failed to setup camera\n");
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
+		clean_up();
+		fprintf(stderr, "Failed to start camera\n");
+		return -1;	
+	}
+
+	return 0;
 }
 
 void camera::printConnectedCams() {
@@ -85,15 +101,8 @@ void camera::printConnectedCams() {
 	dc1394_free(d);
 }
 
-int camera::open(const char* cam_guid, const char* video_mode, float fps, const char* method, const char* pattern)
-{
-	if (setBayer(method, pattern) < 0) {
-		fprintf(stderr, "ERROR invalid pattern");
-		return -1;
-	}
-
+int camera::initCam(const char* cam_guid) {
 	int err;
-	dc1394_t *d;
 	dc1394camera_list_t *list;
 	d = dc1394_new();
 	if (d == NULL)
@@ -164,27 +173,35 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 		return -1;
 	}
 
-	bool Set_Success =  true;
+	return 0;
+}
+
+int camera::initParam(const char* video_mode, float fps, const char* method, const char* pattern) {
 	if (setVideoMode(video_mode) < 0) {
-		Set_Success = false;
+		return -1;
 	} else if (setFrameRate(fps) < 0) {
-		Set_Success = false;
+		return -1;
+	} else if (setBayer(method, pattern) < 0) {
+		return -1;
 	}
+	
+	return 0;
+}
 
-	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT))
-	{
-		Set_Success = false;	
-	}
-
-	if (!Set_Success)
-	{
-		clean_up();
-		fprintf(stderr, "Failed to open camera\n");
+int camera::open(const char* cam_guid, const char* video_mode, float fps, const char* method, const char* pattern)
+{
+	if (initCam(cam_guid) < 0) {
 		return -1;
 	}
 
-	if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON))
-	{
+	if (initParam(video_mode, fps, method, pattern) < 0) {
+		clean_up();
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+		clean_up();
+		fprintf(stderr, "Failed to setup camera\n");
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
 		clean_up();
 		fprintf(stderr, "Failed to start camera\n");
 		return -1;	
@@ -210,11 +227,52 @@ int camera::setFrameRate(float fps) {
 }
 
 int camera::getBestVideoMode(dc1394video_mode_t *mode) {
-	return 0;
+	dc1394error_t err;
+	dc1394video_modes_t modes;
+	
+	/* get all supported video modes for camera*/
+	err = dc1394_video_get_supported_modes(cam, &modes);
+
+	if (err != DC1394_SUCCESS) 
+		fprintf(stderr, "ERROR getting supported videomodes\n");
+	else {
+		if (modes.num == 0) {
+			fprintf(stderr, "ERROR no supported videomodes\n");
+			return -1;
+		}
+		int count = modes.num - 1;
+		*mode = modes.modes[count];
+		while (*mode >= DC1394_VIDEO_MODE_FORMAT7_MIN) {
+			count--;
+			if (count < 0) {
+				fprintf(stderr, "ERROR no supported non-format7 videomodes\n");
+				return -1;
+			}	
+			*mode = modes.modes[count];
+		}
+		return 0;
+	}
+	return -1;
 }
 
-int camera::getBestFrameRate(dc1394framerate_t *rate) {
-	return 0;
+int camera::getBestFrameRate(dc1394framerate_t *rate, dc1394video_mode_t mode) {
+	dc1394error_t err;
+	dc1394framerates_t rates;
+	
+	/* get all supported video modes for camera*/
+	err = dc1394_video_get_supported_framerates(cam, mode, &rates);
+
+	if (err != DC1394_SUCCESS) 
+		fprintf(stderr, "ERROR getting supported framerates\n");
+	else {
+		if (rates.num == 0) {
+			fprintf(stderr, "ERROR no supported framerates\n");
+			return -1;
+		}
+		*rate = rates.framerates[rates.num - 1];
+		return 0;
+	}
+	return -1;
 }
 
 /* Sets video_mode based on string input */
@@ -226,8 +284,13 @@ int camera::convertVideoMode(const char* mode, dc1394video_mode_t *video_mode)
 
 			/* if a non-Format 7 mode set width and height */
 			if (i < 23) {
-				width = videoWidths[i];
-				height = videoHeights[i];
+				//width = videoWidths[i];
+				//height = videoHeights[i];
+				if (DC1394_SUCCESS != 
+					dc1394_get_image_size_from_video_mode(cam, *video_mode, (uint32_t*)&width, (uint32_t*)&height)) {
+					fprintf(stderr, "Failed to convert video mode to image size\n");
+					return -1;
+				}
 			}
 
 			/* check if it is a valid video */
@@ -255,7 +318,7 @@ int camera::checkValidVideoMode(dc1394video_mode_t *mode) {
 	err = dc1394_video_get_supported_modes(cam, &modes);
 
 	if (err != DC1394_SUCCESS) 
-		fprintf(stderr, "ERROR getting supported videomodes");
+		fprintf(stderr, "ERROR getting supported videomodes\n");
 	else {
 		for (unsigned int i = 0; i < modes.num; i++) {
 			if (*mode == modes.modes[i]) 
@@ -399,13 +462,13 @@ int camera::setBayer(const char* method, const char* pattern)
 		}
 	}
 
+	fprintf(stderr, "ERROR invalid pattern");
 	return -1;
 }
 
 void camera::clean_up()
 {
-	if (cam)
-	{
+	if (cam) {
 		dc1394_capture_stop(cam);
 		dc1394_camera_free(cam);
 	}
