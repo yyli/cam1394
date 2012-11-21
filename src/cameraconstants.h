@@ -105,4 +105,25 @@ const int videoFrameRates[] = {
 	240
 };
 
+const int STARTBAYERMETHODS = DC1394_BAYER_METHOD_MIN;
+
+const char *bayerMethods[] = {
+	"NEAREST",
+	"SIMPLE",
+	"BILINEAR",
+	"HQLINEAR",
+	"DOWNSAMPLE",
+	"EDGESENSE",
+	"VNG",
+	"AHD"
+};
+
+const int STARTCOLORFILTER = DC1394_COLOR_FILTER_MIN;
+
+const char *bayerPatterns[] = {
+	"RGGB",
+	"GBRG",
+	"GRBG",
+	"BGGR"
+};
 #endif

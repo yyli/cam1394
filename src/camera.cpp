@@ -85,9 +85,12 @@ void camera::printConnectedCams() {
 	dc1394_free(d);
 }
 
-int camera::open(const char* cam_guid, const char* video_mode, float fps, const char* bayer, const char* method)
+int camera::open(const char* cam_guid, const char* video_mode, float fps, const char* method, const char* pattern)
 {
-	convertBayer(bayer, method);
+	if (setBayer(method, pattern) < 0) {
+		fprintf(stderr, "ERROR invalid pattern");
+		return -1;
+	}
 
 	int err;
 	dc1394_t *d;
@@ -371,12 +374,32 @@ void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
 	}
 }
 
-void camera::convertBayer(const char* bayer, const char* method)
+int camera::setBayer(const char* method, const char* pattern)
 {
 	bayer_met = (dc1394bayer_method_t)-1;
-//	bayer_met = DC1394_BAYER_METHOD_NEAREST;
-//	bayer_pat = DC1394_COLOR_FILTER_GRBG;
-	bayer_pat = DC1394_COLOR_FILTER_BGGR;
+	if (method == NULL)
+		return 0;
+
+	for (int i = 0; i < DC1394_BAYER_METHOD_NUM; i++) {
+		if (!strcasecmp(method, bayerMethods[i])) {
+			bayer_met = (dc1394bayer_method_t)(STARTBAYERMETHODS + i);
+			break;
+		}
+	}
+	
+	if (bayer_met == -1) {
+		bayer_pat = (dc1394color_filter_t)-1;
+		return 0;
+	}
+
+	for (int i = 0; i < DC1394_COLOR_FILTER_NUM; i++) {
+		if (!strcasecmp(pattern, bayerPatterns[i])) {
+			bayer_pat = (dc1394color_filter_t)(STARTCOLORFILTER + i);
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 void camera::clean_up()

@@ -14,7 +14,7 @@ int main() {
 
 		a.printConnectedCams();
 
-        if (a.open("00B09D0100AF05C1", "640x480_MONO8", 60, NULL, NULL) < 0)
+        if (a.open("00B09D0100AF05C1", "640x480_MONO8", 60, "SIMPLE", "BGGR") < 0)
                 return -1;
 
 		a.printGUID();

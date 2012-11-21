@@ -137,6 +137,15 @@ namespace cam1394
 		/*!\brief prints the GUID of attached camera
 		 */
 		long getGUID();
+		
+		/*!\brief sets the debayering method and pattern
+		 * \param method the string name of the method from 
+		 * \link cameraconstant.h::bayerMethods \endlink
+		 * \param pattern the string name of the pattern from
+		 * \link cameraconstant.h::bayerPatterns \endlink
+		 * \return 0 if success, <0 if failure
+		 */
+		int setBayer(const char* method, const char* pattern);
 
 	private:
 		long guid;
@@ -163,7 +172,6 @@ namespace cam1394
 		void printSupportedFrameRates(dc1394video_mode_t mode);
 		int setFrameRate(float fps);
 
-		void convertBayer(const char*, const char*);
 		void clean_up();
 	};
 };
