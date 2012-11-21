@@ -34,7 +34,11 @@ camera::~camera()
 }
 
 int camera::open() {
-	if (initCam("NONE") < 0) {
+	return open("NONE");
+}
+
+int camera::open(const char* cam_guid) {
+	if (initCam(cam_guid) < 0) {
 		return -1;
 	}
 	
@@ -432,7 +436,7 @@ void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
 	else {
 		printf("Print Supported frame rates for video mode: %s\n", videoModeNames[mode - STARTVIDEOMODE]);
 		for (unsigned int i = 0; i < rates.num; i++) {
-			printf("    FPS %d: [%d] %d\n", i, rates.framerates[i], videoFrameRates[rates.framerates[i] - STARTFRAMERATE]);
+			printf("    FPS %d: [%d] %f\n", i, rates.framerates[i], videoFrameRates[rates.framerates[i] - STARTFRAMERATE]);
 		}
 	}
 }

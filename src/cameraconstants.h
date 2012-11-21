@@ -41,7 +41,7 @@ const char *videoModeNames[] = {
 
 const int STARTFRAMERATE = DC1394_FRAMERATE_MIN;
 
-const int videoFrameRates[] = {
+const float videoFrameRates[] = {
 	1.875,
 	3.75,
 	7.5,

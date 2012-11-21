@@ -48,6 +48,15 @@ namespace cam1394
 		 * \return 1 if success, <0 if failure
 		 */
 		int open();
+		
+		/*!\brief Opens an interface to the specific camera with the 
+		 * largest resolution and the fastest possible frame rate 
+		 * with no debayering
+		 * \param cam_guid		NONE will pick the first available camera, 
+		 * 						else use the GUID printed by #printGUID
+		 * \return 1 if success, <0 if failure
+		 */
+		int open(const char *cam_guid);
 
 		/*!\brief Opens an interface to the camera
 		 * \param cam_guid		NONE will pick the first available camera, 
