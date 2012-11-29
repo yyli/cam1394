@@ -12,7 +12,7 @@
 //GNU General Public License for more details.
 //
 //You should have received a copy of the GNU General Public License
-//along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//along with this program.  If not, see <http://www.gnu.org/licenses/> .
 //
 
 #include <stdio.h>
@@ -42,8 +42,8 @@ int camera::open(const char* cam_guid) {
 		return -1;
 	}
 	
-	dc1394video_mode_t mode = DC1394_VIDEO_MODE_MIN;
-	dc1394framerate_t rate = DC1394_FRAMERATE_MIN;
+	dc1394video_mode_t mode;
+	dc1394framerate_t rate;
 
 	if (getBestVideoMode(&mode) < 0) {
 		return -1;
@@ -181,9 +181,9 @@ int camera::initCam(const char* cam_guid) {
 }
 
 int camera::initParam(const char* video_mode, float fps, const char* method, const char* pattern) {
-	if (setVideoMode(video_mode) < 0) {
+	if (_setVideoMode(video_mode) < 0) {
 		return -1;
-	} else if (setFrameRate(fps) < 0) {
+	} else if (_setFrameRate(fps) < 0) {
 		return -1;
 	} else if (setBayer(method, pattern) < 0) {
 		return -1;
@@ -214,7 +214,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	return 0;
 }
 
-int camera::setFrameRate(float fps) {
+int camera::_setFrameRate(float fps) {
 	dc1394framerate_t fr; 
 	if (convertFrameRate(fps, &fr) < 0) {
 		printSupportedFrameRates(_video_mode);
@@ -227,6 +227,7 @@ int camera::setFrameRate(float fps) {
 		return -1;
 	}
 
+	_fps = fr;
 	return 0;
 }
 
@@ -351,7 +352,7 @@ void camera::printSupportedVideoModes() {
 	}
 }
 
-int camera::setVideoMode(const char* video_mode) {
+int camera::_setVideoMode(const char* video_mode) {
 	dc1394video_mode_t mode;
 	if (convertVideoMode(video_mode, &mode) < 0) {
 		printf("ERROR: invalid video mode: %s\n", video_mode);
@@ -366,6 +367,14 @@ int camera::setVideoMode(const char* video_mode) {
 	}
 
 	_video_mode = mode;
+
+	dc1394framerate_t rate;
+	if (getBestFrameRate(&rate, mode) < 0)
+		return -1;
+
+	if (_setFrameRate(videoFrameRates[rate - STARTFRAMERATE]))
+		return -1;
+
 	return 0;
 }
 
@@ -508,10 +517,8 @@ int camera::setTrigger(int trigger_in)
 	if (DC1394_SUCCESS != dc1394_external_trigger_set_power(cam, trigger))
 	{
 		fprintf(stderr, "Unable to set trigger mode\n");
-		clean_up();
 		return -1;
 	}
-	std::cout << trigger_in << " " << (trigger == DC1394_ON) << std::endl;
 	return 0;
 }
 
@@ -522,7 +529,6 @@ int camera::setShutter(int shutter)
 	if (DC1394_SUCCESS != dc1394_feature_set_mode(cam, DC1394_FEATURE_SHUTTER, (autoShutter ? DC1394_FEATURE_MODE_AUTO:DC1394_FEATURE_MODE_MANUAL)))
 	{
 		fprintf(stderr, "Unable to set shutter mode\n");
-		clean_up();
 		return -1;
 	}
 
@@ -531,7 +537,6 @@ int camera::setShutter(int shutter)
 		if (DC1394_SUCCESS != dc1394_feature_set_value(cam, DC1394_FEATURE_SHUTTER, shutter))
 		{
 			fprintf(stderr, "Unable to set shutter value\n");
-			clean_up();
 			return -1;
 		}
 	}
@@ -546,7 +551,6 @@ int camera::setGain(int gain)
 	if (DC1394_SUCCESS != dc1394_feature_set_mode(cam, DC1394_FEATURE_GAIN, (autoGain ? DC1394_FEATURE_MODE_AUTO:DC1394_FEATURE_MODE_MANUAL)))
 	{
 		fprintf(stderr, "Unable to set gain mode\n");
-		clean_up();
 		return -1;
 	}
 
@@ -555,7 +559,6 @@ int camera::setGain(int gain)
 		if (DC1394_SUCCESS != dc1394_feature_set_value(cam, DC1394_FEATURE_GAIN, gain))
 		{
 			fprintf(stderr, "Unable to set gain value\n");
-			clean_up();
 			return -1;
 		}
 	}
@@ -568,7 +571,6 @@ int camera::setWhiteBalance(unsigned int b_u, unsigned int r_v)
 	if (DC1394_SUCCESS != dc1394_feature_whitebalance_set_value(cam, b_u, r_v))
 	{
 		fprintf(stderr, "Unable to set white balance value\n");
-		clean_up();
 		return -1;
 	}
 
@@ -657,4 +659,68 @@ void camera::printGUID()
 
 long camera::getGUID() {
 	return guid;
+}
+
+int camera::setVideoMode(const char* video_mode) {
+	if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_OFF)) {
+		clean_up();
+		fprintf(stderr, "Failed to stop transmission\n");
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_capture_stop(cam)) {
+		clean_up();
+		fprintf(stderr, "Failed to stop capture\n");
+		return -1;	
+	}
+
+	int ret;
+	if ((ret = _setVideoMode(video_mode)) < 0)
+		return ret;
+
+	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+		clean_up();
+		fprintf(stderr, "Failed to start capture\n");
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
+		clean_up();
+		fprintf(stderr, "Failed to start transmission\n");
+		return -1;	
+	}
+
+	return 0;
+}
+
+int camera::setFrameRate(float fps) {
+	if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_OFF)) {
+		clean_up();
+		fprintf(stderr, "Failed to stop transmission\n");
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_capture_stop(cam)) {
+		clean_up();
+		fprintf(stderr, "Failed to stop capture\n");
+		return -1;	
+	}
+
+	int ret;
+	if ((ret = _setFrameRate(fps)) < 0)
+		return ret;
+
+	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+		clean_up();
+		fprintf(stderr, "Failed to start capture\n");
+		return -1;	
+	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
+		clean_up();
+		fprintf(stderr, "Failed to start transmission\n");
+		return -1;	
+	}
+
+	return 0;
+}
+
+void camera::printVideoMode() {
+	printf("Video Mode: %s\n", videoModeNames[_video_mode - STARTVIDEOMODE]);
+}
+
+void camera::printFrameRate() {
+	printf("Frame Rate: %f\n", videoFrameRates[_fps - STARTFRAMERATE]);
 }

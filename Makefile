@@ -12,7 +12,7 @@ BUILDDIR=build
 
 .PHONY: all clean doxygen
 
-all: example example_auto
+all: example example_auto example_onthefly
 
 # EXECUTABLES FILES HERE:
 
@@ -22,6 +22,11 @@ example: src/example.cpp $(BUILDDIR)/camera.o
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
 
 example_auto: src/example_auto.cpp $(BUILDDIR)/camera.o
+	@echo "CC [$@]"
+	@mkdir -p build
+	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
+
+example_onthefly: src/example_onthefly.cpp $(BUILDDIR)/camera.o
 	@echo "CC [$@]"
 	@mkdir -p build
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)

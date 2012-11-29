@@ -156,8 +156,14 @@ namespace cam1394
 		 */
 		int setBayer(const char* method, const char* pattern);
 
+		int setVideoMode(const char*);
+		int setFrameRate(float fps);
+
+		void printFrameRate();
+		void printVideoMode();
+
 	private:
-		long guid;
+		uint64_t guid;
 		int width;
 		int height;
 		
@@ -166,6 +172,7 @@ namespace cam1394
 		dc1394color_filter_t bayer_pat;
 		dc1394bayer_method_t bayer_met;
 		dc1394video_mode_t _video_mode;
+		dc1394framerate_t _fps;
 		
 		long timestamp;
 		int droppedframes;
@@ -179,12 +186,13 @@ namespace cam1394
 		int convertVideoMode(const char*, dc1394video_mode_t*);
 		int checkValidVideoMode(dc1394video_mode_t*);
 		void printSupportedVideoModes();
-		int setVideoMode(const char*);
 
 		int convertFrameRate(float, dc1394framerate_t*);
 		int checkValidFrameRate(dc1394framerate_t* frame_rate);
 		void printSupportedFrameRates(dc1394video_mode_t mode);
-		int setFrameRate(float fps);
+
+		int _setVideoMode(const char*);
+		int _setFrameRate(float fps);
 
 		void clean_up();
 	};

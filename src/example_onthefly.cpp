@@ -17,9 +17,14 @@ int main() {
         if (a.open("00B09D0100AF05C1", "640x480_MONO8", 60, "SIMPLE", "BGGR") < 0)
                 return -1;
 
+        a.setVideoMode("1280x960_MONO8");
+
 		a.printGUID();
+		a.printVideoMode();
+		a.printFrameRate();
 
         int numDropped = 0;
+        int count = 200;
         while (1) {
 			camRead.start();
 			aimage = a.read();
@@ -27,7 +32,11 @@ int main() {
 			imshow("test", aimage);
 			waitKey(5);
 			numDropped += a.getNumDroppedFrames();
-			cout << camRead.elapsed()*1000 << "ms, " << numDropped << endl;
+			//cout << camRead.elapsed()*1000 << "ms, " << numDropped << endl;
+
+			if (count == 0) {}
+
+			count--;
         }
         return 0;
 }
