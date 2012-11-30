@@ -96,9 +96,22 @@ void camera::printConnectedCams() {
 		return;
 	}
 
-	printf("Connected Cameras\n");	
+	printf("====== Connected Cameras ======\n");	
 	for (unsigned int i = 0; i < list->num; i++) {
-		printf("Cam %d: %016lX\n", i, list->ids[i].guid);
+		uint64_t guid = list->ids[i].guid;
+	
+		dc1394camera_t *camera;
+		camera = dc1394_camera_new(d, guid);
+		if (!camera) {
+			fprintf(stderr, "failed to open camera with GUID %016lX\n", guid);
+			clean_up();
+			return;
+		}
+
+		printf("Cam %d: %016lX (%s %s)\n", i, guid, camera->vendor, camera->model);
+		printSupportedVideoModes(camera);
+		printf("\n\n");
+		dc1394_camera_free(camera);
 	}
 	
 	dc1394_camera_free_list(list);
@@ -114,7 +127,6 @@ int camera::initCam(const char* cam_guid) {
 		fprintf(stderr, "Can't initialize dc1394_content\n");
 		return -1;
 	}
-
 
 	err = dc1394_camera_enumerate(d, &list);
 	if (err != DC1394_SUCCESS)
@@ -217,7 +229,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 int camera::_setFrameRate(float fps) {
 	dc1394framerate_t fr; 
 	if (convertFrameRate(fps, &fr) < 0) {
-		printSupportedFrameRates(_video_mode);
+		printSupportedFrameRates(cam, _video_mode);
 		return -1;
 	}
 
@@ -335,19 +347,23 @@ int camera::checkValidVideoMode(dc1394video_mode_t *mode) {
 }
 
 /* Prints the supported video modes */
-void camera::printSupportedVideoModes() {
+void camera::printSupportedVideoModes(dc1394camera_t *camera) {
+	if (!camera) {
+		fprintf(stderr, "ERROR no cameras initlizalied\n");
+		return;
+	}
 	dc1394error_t err;
 	dc1394video_modes_t modes;
-	err = dc1394_video_get_supported_modes(cam, &modes);
+	err = dc1394_video_get_supported_modes(camera, &modes);
 	
 	if (err != DC1394_SUCCESS) 
-		fprintf(stderr, "ERROR getting supported videomodes");
+		fprintf(stderr, "ERROR getting supported videomodes\n");
 	else {
 		printf("listing possible video modes\n");
 		for (unsigned int i = 0; i < modes.num; i++) {
 			printf("mode %d: [%d] %s:\n", i, modes.modes[i], videoModeNames[modes.modes[i] - STARTVIDEOMODE]);
 			if (modes.modes[i] < DC1394_VIDEO_MODE_FORMAT7_MIN)
-				printSupportedFrameRates(modes.modes[i]);
+				printSupportedFrameRates(camera, modes.modes[i]);
 		}
 	}
 }
@@ -356,7 +372,7 @@ int camera::_setVideoMode(const char* video_mode) {
 	dc1394video_mode_t mode;
 	if (convertVideoMode(video_mode, &mode) < 0) {
 		printf("ERROR: invalid video mode: %s\n", video_mode);
-		printSupportedVideoModes();
+		printSupportedVideoModes(cam);
 		return -1;
 	}
 
@@ -430,7 +446,11 @@ int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
 }
 
 /* Prints the supported frame rates */
-void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
+void camera::printSupportedFrameRates(dc1394camera_t *camera, dc1394video_mode_t mode) {
+	if (!camera) {
+		fprintf(stderr, "ERROR no cameras initlizalied\n");
+		return;
+	}
 	if (mode < DC1394_VIDEO_MODE_MIN || mode > DC1394_VIDEO_MODE_MAX) {
 		fprintf(stderr, "ERROR: Invalid video mode, can't get frame rates");
 		return;
@@ -438,7 +458,7 @@ void camera::printSupportedFrameRates(dc1394video_mode_t mode) {
 
 	dc1394error_t err;
 	dc1394framerates_t rates;
-	err = dc1394_video_get_supported_framerates(cam, mode, &rates);
+	err = dc1394_video_get_supported_framerates(camera, mode, &rates);
 	
 	if (err != DC1394_SUCCESS) 
 		fprintf(stderr, "ERROR getting supported framerates");
@@ -622,6 +642,8 @@ cv::Mat camera::read()
 	droppedframes = frames_read - 1;
 	prev_frame->color_filter= bayer_pat;
 
+	int bits = prev_frame->image_bytes/(prev_frame->size[0]*prev_frame->size[1]) * 8;
+
 	cv::Mat ret;
 	if (bayer_met != -1) {
 		if (DC1394_SUCCESS != dc1394_debayer_frames(prev_frame, &end, bayer_met))
@@ -629,10 +651,10 @@ cv::Mat camera::read()
 			fprintf(stderr, "Unable to debayer frame\n");
 		}
 
-		cv::Mat final(H, W, CV_8UC3, end.image);
+		cv::Mat final(H, W, getOpenCVbits(bits, 3), end.image);
 		final.copyTo(ret);
 	} else {
-		cv::Mat final(H, W, CV_8UC1, prev_frame->image);
+		cv::Mat final(H, W, getOpenCVbits(bits, 1), prev_frame->image);
 		final.copyTo(ret);
 	}
 
@@ -723,4 +745,17 @@ void camera::printVideoMode() {
 
 void camera::printFrameRate() {
 	printf("Frame Rate: %f\n", videoFrameRates[_fps - STARTFRAMERATE]);
+}
+
+int camera::getOpenCVbits(int bits, int stride) {
+	if (bits <= 8) {
+		return CV_8UC(stride); 
+	} else if (bits <= 16) {
+		return CV_16UC(stride);
+	} else if (bits <= 32) {
+		return CV_32FC(stride);
+	} else {
+		return CV_64FC(stride);
+	}
+	return 0;
 }

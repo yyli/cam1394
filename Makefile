@@ -12,9 +12,14 @@ BUILDDIR=build
 
 .PHONY: all clean doxygen
 
-all: example example_auto example_onthefly
+all: example example_auto example_onthefly getCams
 
 # EXECUTABLES FILES HERE:
+
+getCams: src/getCams.cpp $(BUILDDIR)/camera.o
+	@echo "CC [$@]"
+	@mkdir -p build
+	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
 
 example: src/example.cpp $(BUILDDIR)/camera.o
 	@echo "CC [$@]"
