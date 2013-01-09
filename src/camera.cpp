@@ -57,11 +57,11 @@ int camera::open(const char* cam_guid) {
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
-		fprintf(stderr, "Failed to setup camera\n");
+		fprintf(stderr, "ERROR: Failed to setup camera\n");
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
 		clean_up();
-		fprintf(stderr, "Failed to start camera\n");
+		fprintf(stderr, "ERROR: Failed to start camera\n");
 		return -1;	
 	}
 
@@ -75,7 +75,7 @@ void camera::printConnectedCams() {
 	
 	d = dc1394_new();
 	if (d == NULL) {
-		fprintf(stderr, "Can't initialize dc1394_content\n");
+		fprintf(stderr, "ERROR: Can't initialize dc1394_content\n");
 		dc1394_camera_free_list(list);
 		dc1394_free(d);
 		return;
@@ -83,14 +83,14 @@ void camera::printConnectedCams() {
 	
 	err = dc1394_camera_enumerate(d, &list);
 	if (err != DC1394_SUCCESS) {
-		fprintf(stderr, "Could not get camera list\n");
+		fprintf(stderr, "ERROR: Could not get camera list\n");
 		dc1394_camera_free_list(list);
 		dc1394_free(d);
 		return;
 	}
 	
 	if (list->num == 0) {
-		printf("No Cameras Found\n");
+		printf("ERROR: No Cameras Found\n");
 		dc1394_camera_free_list(list);
 		dc1394_free(d);
 		return;
@@ -103,7 +103,7 @@ void camera::printConnectedCams() {
 		dc1394camera_t *camera;
 		camera = dc1394_camera_new(d, guid);
 		if (!camera) {
-			fprintf(stderr, "failed to open camera with GUID %016lX\n", guid);
+			fprintf(stderr, "ERROR: Failed to open camera with GUID %016lX\n", guid);
 			clean_up();
 			return;
 		}
@@ -124,20 +124,20 @@ int camera::initCam(const char* cam_guid) {
 	d = dc1394_new();
 	if (d == NULL)
 	{
-		fprintf(stderr, "Can't initialize dc1394_content\n");
+		fprintf(stderr, "ERROR: Can't initialize dc1394_content\n");
 		return -1;
 	}
 
 	err = dc1394_camera_enumerate(d, &list);
 	if (err != DC1394_SUCCESS)
 	{
-		fprintf(stderr, "Could not get camera list\n");
+		fprintf(stderr, "ERROR: Could not get camera list\n");
 		return -1;
 	}
 
 	if (list->num == 0)
 	{
-		fprintf(stderr, "No Cameras Found\n");
+		fprintf(stderr, "ERROR: No Cameras Found\n");
 		return -1;
 	}
 	
@@ -149,9 +149,7 @@ int camera::initCam(const char* cam_guid) {
 
 		if (!strcasecmp(cam_guid, "NONE"))
 		{
-//#ifdef DEBUGCAMERA
 			fprintf(stderr, "WARNING: No guid specified, using first camera. GUID: %s\n", temp);
-//#endif
 			guid = list->ids[i].guid;
 			break;
 		}
@@ -166,9 +164,15 @@ int camera::initCam(const char* cam_guid) {
 		}
 	}
 
+	if (guid == 0) {
+		fprintf(stderr, "ERROR: Failed to find camera with GUID %s\n", cam_guid);
+		clean_up();
+		return -1;		
+	}
+
 	cam = dc1394_camera_new(d, guid);
 	if (!cam) {
-		fprintf(stderr, "failed to initliaze camera with GUID %016lX\n", guid);
+		fprintf(stderr, "ERROR: Failed to initliaze camera with GUID %016lX\n", guid);
 		clean_up();
 		return -1;
 	}
@@ -180,11 +184,11 @@ int camera::initCam(const char* cam_guid) {
 	{
 		if (!strcasecmp(cam_guid, "NONE"))
 		{
-			fprintf(stderr, "Can't find camera\n");
+			fprintf(stderr, "ERROR: Can't find camera\n");
 		}
 		else
 		{
-			fprintf(stderr, "Can't find camera with guid %s\n", cam_guid);
+			fprintf(stderr, "ERROR: Can't find camera with guid %s\n", cam_guid);
 		}
 		return -1;
 	}
@@ -215,11 +219,11 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
-		fprintf(stderr, "Failed to setup camera\n");
+		fprintf(stderr, "ERROR: Failed to setup camera\n");
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
 		clean_up();
-		fprintf(stderr, "Failed to start camera\n");
+		fprintf(stderr, "ERROR: Failed to start camera\n");
 		return -1;	
 	}
 
@@ -235,7 +239,7 @@ int camera::_setFrameRate(float fps) {
 
 	if (DC1394_SUCCESS != dc1394_video_set_framerate(cam, fr))
 	{
-		fprintf(stderr, "Failed to set the framerate\n");
+		fprintf(stderr, "ERROR: Failed to set the framerate\n");
 		return -1;
 	}
 
@@ -254,7 +258,7 @@ int camera::getBestVideoMode(dc1394video_mode_t *mode) {
 		fprintf(stderr, "ERROR getting supported videomodes\n");
 	else {
 		if (modes.num == 0) {
-			fprintf(stderr, "ERROR no supported videomodes\n");
+			fprintf(stderr, "ERROR: no supported videomodes\n");
 			return -1;
 		}
 		int count = modes.num - 1;
@@ -262,7 +266,7 @@ int camera::getBestVideoMode(dc1394video_mode_t *mode) {
 		while (*mode >= DC1394_VIDEO_MODE_FORMAT7_MIN) {
 			count--;
 			if (count < 0) {
-				fprintf(stderr, "ERROR no supported non-format7 videomodes\n");
+				fprintf(stderr, "ERROR: no supported non-format7 videomodes\n");
 				return -1;
 			}	
 			*mode = modes.modes[count];
@@ -283,7 +287,7 @@ int camera::getBestFrameRate(dc1394framerate_t *rate, dc1394video_mode_t mode) {
 		fprintf(stderr, "ERROR getting supported framerates\n");
 	else {
 		if (rates.num == 0) {
-			fprintf(stderr, "ERROR no supported framerates\n");
+			fprintf(stderr, "ERROR: no supported framerates\n");
 			return -1;
 		}
 		*rate = rates.framerates[rates.num - 1];
@@ -305,7 +309,7 @@ int camera::convertVideoMode(const char* mode, dc1394video_mode_t *video_mode)
 				//height = videoHeights[i];
 				if (DC1394_SUCCESS != 
 					dc1394_get_image_size_from_video_mode(cam, *video_mode, (uint32_t*)&width, (uint32_t*)&height)) {
-					fprintf(stderr, "Failed to convert video mode to image size\n");
+					fprintf(stderr, "ERROR: Failed to convert video mode to image size\n");
 					return -1;
 				}
 			}
@@ -349,7 +353,7 @@ int camera::checkValidVideoMode(dc1394video_mode_t *mode) {
 /* Prints the supported video modes */
 void camera::printSupportedVideoModes(dc1394camera_t *camera) {
 	if (!camera) {
-		fprintf(stderr, "ERROR no cameras initlizalied\n");
+		fprintf(stderr, "ERROR: no cameras initlizalied\n");
 		return;
 	}
 	dc1394error_t err;
@@ -378,7 +382,7 @@ int camera::_setVideoMode(const char* video_mode) {
 
 	if (DC1394_SUCCESS != dc1394_video_set_mode(cam, mode))
 	{
-		fprintf(stderr, "Failed to set the video mode\n");
+		fprintf(stderr, "ERROR: Failed to set the video mode\n");
 		return -1;
 	}
 
@@ -448,7 +452,7 @@ int camera::checkValidFrameRate(dc1394framerate_t* frame_rate) {
 /* Prints the supported frame rates */
 void camera::printSupportedFrameRates(dc1394camera_t *camera, dc1394video_mode_t mode) {
 	if (!camera) {
-		fprintf(stderr, "ERROR no cameras initlizalied\n");
+		fprintf(stderr, "ERROR: no cameras initlizalied\n");
 		return;
 	}
 	if (mode < DC1394_VIDEO_MODE_MIN || mode > DC1394_VIDEO_MODE_MAX) {
@@ -495,7 +499,7 @@ int camera::setBayer(const char* method, const char* pattern)
 		}
 	}
 
-	fprintf(stderr, "ERROR invalid pattern");
+	fprintf(stderr, "ERROR: invalid pattern");
 	return -1;
 }
 
@@ -512,7 +516,7 @@ int camera::setBrightness(unsigned int brightness)
 {
 	if (DC1394_SUCCESS != dc1394_feature_set_value(cam, DC1394_FEATURE_BRIGHTNESS, brightness))
 	{
-		fprintf(stderr, "Unable to set brightness\n");
+		fprintf(stderr, "ERROR: Unable to set brightness\n");
 		return -1;
 	}
 	return 0;
@@ -522,7 +526,7 @@ int camera::setExposure(unsigned int exposure)
 {
 	if (DC1394_SUCCESS != dc1394_feature_set_value(cam, DC1394_FEATURE_EXPOSURE, exposure))
 	{
-		fprintf(stderr, "Unable to set exposure\n");
+		fprintf(stderr, "ERROR: Unable to set exposure\n");
 		return -1;
 	}
 	return 0;
@@ -536,7 +540,7 @@ int camera::setTrigger(int trigger_in)
 
 	if (DC1394_SUCCESS != dc1394_external_trigger_set_power(cam, trigger))
 	{
-		fprintf(stderr, "Unable to set trigger mode\n");
+		fprintf(stderr, "ERROR: Unable to set trigger mode\n");
 		return -1;
 	}
 	return 0;
@@ -548,7 +552,7 @@ int camera::setShutter(int shutter)
 
 	if (DC1394_SUCCESS != dc1394_feature_set_mode(cam, DC1394_FEATURE_SHUTTER, (autoShutter ? DC1394_FEATURE_MODE_AUTO:DC1394_FEATURE_MODE_MANUAL)))
 	{
-		fprintf(stderr, "Unable to set shutter mode\n");
+		fprintf(stderr, "ERROR: Unable to set shutter mode\n");
 		return -1;
 	}
 
@@ -556,7 +560,7 @@ int camera::setShutter(int shutter)
 	{
 		if (DC1394_SUCCESS != dc1394_feature_set_value(cam, DC1394_FEATURE_SHUTTER, shutter))
 		{
-			fprintf(stderr, "Unable to set shutter value\n");
+			fprintf(stderr, "ERROR: Unable to set shutter value\n");
 			return -1;
 		}
 	}
@@ -570,7 +574,7 @@ int camera::setGain(int gain)
 
 	if (DC1394_SUCCESS != dc1394_feature_set_mode(cam, DC1394_FEATURE_GAIN, (autoGain ? DC1394_FEATURE_MODE_AUTO:DC1394_FEATURE_MODE_MANUAL)))
 	{
-		fprintf(stderr, "Unable to set gain mode\n");
+		fprintf(stderr, "ERROR: Unable to set gain mode\n");
 		return -1;
 	}
 
@@ -578,7 +582,7 @@ int camera::setGain(int gain)
 	{
 		if (DC1394_SUCCESS != dc1394_feature_set_value(cam, DC1394_FEATURE_GAIN, gain))
 		{
-			fprintf(stderr, "Unable to set gain value\n");
+			fprintf(stderr, "ERROR: Unable to set gain value\n");
 			return -1;
 		}
 	}
@@ -590,7 +594,7 @@ int camera::setWhiteBalance(unsigned int b_u, unsigned int r_v)
 {
 	if (DC1394_SUCCESS != dc1394_feature_whitebalance_set_value(cam, b_u, r_v))
 	{
-		fprintf(stderr, "Unable to set white balance value\n");
+		fprintf(stderr, "ERROR: Unable to set white balance value\n");
 		return -1;
 	}
 
@@ -601,7 +605,7 @@ cv::Mat camera::read()
 {
 	if (!cam)
 	{
-		fprintf(stderr, "Camera not initialized\n");
+		fprintf(stderr, "ERROR: Camera not initialized\n");
 		exit(1);
 	}
 	
@@ -648,7 +652,7 @@ cv::Mat camera::read()
 	if (bayer_met != -1) {
 		if (DC1394_SUCCESS != dc1394_debayer_frames(prev_frame, &end, bayer_met))
 		{
-			fprintf(stderr, "Unable to debayer frame\n");
+			fprintf(stderr, "ERROR: Unable to debayer frame\n");
 		}
 
 		cv::Mat final(H, W, getOpenCVbits(bits, 3), end.image);
@@ -686,11 +690,11 @@ long camera::getGUID() {
 int camera::setVideoMode(const char* video_mode) {
 	if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_OFF)) {
 		clean_up();
-		fprintf(stderr, "Failed to stop transmission\n");
+		fprintf(stderr, "ERROR: Failed to stop transmission\n");
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_capture_stop(cam)) {
 		clean_up();
-		fprintf(stderr, "Failed to stop capture\n");
+		fprintf(stderr, "ERROR: Failed to stop capture\n");
 		return -1;	
 	}
 
@@ -700,11 +704,11 @@ int camera::setVideoMode(const char* video_mode) {
 
 	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
-		fprintf(stderr, "Failed to start capture\n");
+		fprintf(stderr, "ERROR: Failed to start capture\n");
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
 		clean_up();
-		fprintf(stderr, "Failed to start transmission\n");
+		fprintf(stderr, "ERROR: Failed to start transmission\n");
 		return -1;	
 	}
 
@@ -714,11 +718,11 @@ int camera::setVideoMode(const char* video_mode) {
 int camera::setFrameRate(float fps) {
 	if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_OFF)) {
 		clean_up();
-		fprintf(stderr, "Failed to stop transmission\n");
+		fprintf(stderr, "ERROR: Failed to stop transmission\n");
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_capture_stop(cam)) {
 		clean_up();
-		fprintf(stderr, "Failed to stop capture\n");
+		fprintf(stderr, "ERROR: Failed to stop capture\n");
 		return -1;	
 	}
 
@@ -728,11 +732,11 @@ int camera::setFrameRate(float fps) {
 
 	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
-		fprintf(stderr, "Failed to start capture\n");
+		fprintf(stderr, "ERROR: Failed to start capture\n");
 		return -1;	
 	} else if (DC1394_SUCCESS != dc1394_video_set_transmission(cam, DC1394_ON)) {
 		clean_up();
-		fprintf(stderr, "Failed to start transmission\n");
+		fprintf(stderr, "ERROR: Failed to start transmission\n");
 		return -1;	
 	}
 

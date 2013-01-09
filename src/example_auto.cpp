@@ -14,7 +14,8 @@ int main() {
 
 		a.printConnectedCams();
 
-        if (a.open("00B09D0100AF05C1") < 0)
+        //if (a.open("00B09D0100AF05C1") < 0)
+        if (a.open("00B09D0100AF05C") < 0)
                 return -1;
 
 		a.printGUID();
