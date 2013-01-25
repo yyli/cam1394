@@ -17,7 +17,12 @@
 
 #include <stdio.h>
 #include <cassert>
+#include <cstring>
+#include <cstdlib>
+
+#ifndef NOOPENCV
 #include "highgui.h"
+#endif
 
 #include "camera.h"
 #include "cameraconstants.h"
@@ -601,6 +606,80 @@ int camera::setWhiteBalance(unsigned int b_u, unsigned int r_v)
 	return 0;
 }
 
+int camera::read(cam1394Image* image) {
+	if (!cam)
+	{
+		fprintf(stderr, "ERROR: Camera not initialized\n");
+		exit(1);
+	}
+	
+	const int W = width;
+	const int H = height;
+	dc1394video_frame_t end;
+	dc1394video_frame_t * frame;
+	dc1394video_frame_t * prev_frame;
+	prev_frame = (dc1394video_frame_t *)malloc(sizeof(dc1394video_frame_t));
+	prev_frame->id = 255;
+	dc1394error_t err;
+	end.image = (unsigned char*)malloc(W * H * 3 * sizeof(unsigned char));
+	end.color_coding = DC1394_COLOR_CODING_RGB8;
+	
+	
+	int frames_read = 0;
+		
+	err = dc1394_capture_dequeue(cam, DC1394_CAPTURE_POLICY_WAIT, &frame);
+	if (frame != NULL && err == DC1394_SUCCESS)
+	{
+		dc1394_capture_enqueue(cam, frame);
+		memcpy(prev_frame, frame, sizeof(dc1394video_frame_t));
+		frames_read++;
+	}
+
+	while (1)
+	{
+		err = dc1394_capture_dequeue(cam, DC1394_CAPTURE_POLICY_POLL, &frame);
+		if (frame == NULL && err == DC1394_SUCCESS && prev_frame->id != 255)
+			break;
+		else if (frame != NULL && err == DC1394_SUCCESS)
+		{
+			dc1394_capture_enqueue(cam, frame);
+			memcpy(prev_frame, frame, sizeof(dc1394video_frame_t));
+			frames_read++;
+		}
+	}
+	droppedframes = frames_read - 1;
+	prev_frame->color_filter= bayer_pat;
+
+	if (bayer_met != -1) {
+		if (DC1394_SUCCESS != dc1394_debayer_frames(prev_frame, &end, bayer_met))
+		{
+			fprintf(stderr, "ERROR: Unable to debayer frame\n");
+			return -1;
+		}
+
+		if (image->data != NULL)
+			image->destroy();
+		image->width  = end.size[0];
+		image->height = end.size[1];
+		image->size   = end.image_bytes;
+		image->data   = new char[image->size]();
+		memcpy(image->data, end.image, image->size);
+	} else {
+		if (image->data != NULL)
+			image->destroy();
+		image->width  = prev_frame->size[0];
+		image->height = prev_frame->size[1];
+		image->size   = prev_frame->image_bytes;
+		image->data   = new char[image->size]();
+		memcpy(image->data, prev_frame->image, image->size);
+	}
+
+	free(end.image);
+	free(prev_frame);
+	return 0;
+}
+
+#ifndef NOOPENCV
 cv::Mat camera::read()
 {
 	if (!cam)
@@ -667,6 +746,7 @@ cv::Mat camera::read()
 	free(prev_frame);
 	return ret;
 }
+#endif
 
 long camera::getTimestamp()
 {
@@ -751,6 +831,7 @@ void camera::printFrameRate() {
 	printf("Frame Rate: %f\n", videoFrameRates[_fps - STARTFRAMERATE]);
 }
 
+#ifndef NOOPENCV
 int camera::getOpenCVbits(int bits, int stride) {
 	if (bits <= 8) {
 		return CV_8UC(stride); 
@@ -763,3 +844,4 @@ int camera::getOpenCVbits(int bits, int stride) {
 	}
 	return 0;
 }
+#endif

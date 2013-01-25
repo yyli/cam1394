@@ -1,18 +1,28 @@
+.PHONY: all clean doxygen
+
 CXX = g++
 CXXFLAGS = -g -Wall -Isrc
 CXXLD = -ldc1394
 
-CXXOPENCVFLAGS = `pkg-config opencv --cflags`
-CXXOPENCVLD = `pkg-config opencv --libs`
+CHECKOPENCV = $(shell pkg-config opencv --exists 1>&2 2> /dev/null; echo $$?)
+ifeq ($(CHECKOPENCV), 0)
+	CXXOPENCVFLAGS = `pkg-config opencv --cflags`
+	CXXOPENCVLD = `pkg-config opencv --libs`
+	SOURCES = example example_auto example_onthefly getCams
+else
+	CXXOPENCVFLAGS = -DNOOPENCV
+	CXXOPENCVLD =
+	SOURCES = example_noopencv
+endif
 
 CXXFLAGS += $(CXXOPENCVFLAGS)
 CXXLD += $(CXXOPENCVLD)
 
 BUILDDIR=build
 
-.PHONY: all clean doxygen
 
-all: example example_auto example_onthefly getCams
+all: $(SOURCES)
+
 
 # EXECUTABLES FILES HERE:
 
@@ -32,6 +42,11 @@ example_auto: src/example_auto.cpp $(BUILDDIR)/camera.o
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
 
 example_onthefly: src/example_onthefly.cpp $(BUILDDIR)/camera.o
+	@echo "CC [$@]"
+	@mkdir -p build
+	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
+
+example_noopencv: src/example_noopencv.cpp $(BUILDDIR)/camera.o
 	@echo "CC [$@]"
 	@mkdir -p build
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)

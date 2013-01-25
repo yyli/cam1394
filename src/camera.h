@@ -22,13 +22,36 @@
  */
 #ifndef CAMERA_H
 #define CAMERA_H
+#include <dc1394/dc1394.h>
+
+#ifndef NOOPENCV
 #include <cv.h>
 #include <highgui.h>
-#include <dc1394/dc1394.h>
+#endif
 
 //! Contains the camera class definition and other misc variables
 namespace cam1394
 {
+	struct cam1394Image {
+		char *data;
+		int width;
+		int height;
+		int size;
+
+		cam1394Image() : data(NULL) {}
+		/*!\brief destroys cam1394Image
+		 * \return 1 if success, < 0 failure
+		 */
+		int destroy() {
+			if (data != NULL) {
+				delete[] data;
+				data = NULL;
+			}
+
+			return 0;
+		}
+	};
+
 	/*! 
 	 * \class camera
 	 * \brief reads and writes from a FireWire 1394 or Point Grey camera
@@ -83,10 +106,17 @@ namespace cam1394
 		 */
 		int close();
 
+#ifndef NOOPENCV
 		/*!\brief Reads an image from a camera
 		 * \return cv::Mat with image if success, an empty cv::Mat if failure
 		 */
 		cv::Mat read();//cv::Mat&);
+#endif
+
+		/*!\brief Reads an image from a camera
+		 * \return 1 if success, < 0 failure
+		 */
+		int read(cam1394Image* image);
 		
 		/*!\brief Sets the brightness of the camera
 		 * \param brightness brightness value
@@ -194,7 +224,9 @@ namespace cam1394
 		int _setVideoMode(const char*);
 		int _setFrameRate(float fps);
 
+#ifndef NOOPENCV
 		int getOpenCVbits(int, int); 
+#endif
 
 		void clean_up();
 	};
