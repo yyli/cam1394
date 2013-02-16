@@ -108,9 +108,9 @@ void camera::printConnectedCams() {
 			return;
 		}
 
-		printf("Cam %d: %016lX (%s %s)\n", i, guid, camera->vendor, camera->model);
+		printf("Camera %d: %016lX (%s %s)\n", i, guid, camera->vendor, camera->model);
 		printSupportedVideoModes(camera);
-		printf("\n\n");
+		printf("\n");
 		dc1394_camera_free(camera);
 	}
 	
@@ -359,11 +359,17 @@ void camera::printSupportedVideoModes(dc1394camera_t *camera) {
 	if (err != DC1394_SUCCESS) 
 		fprintf(stderr, "ERROR getting supported videomodes\n");
 	else {
-		printf("listing possible video modes\n");
 		for (unsigned int i = 0; i < modes.num; i++) {
-			printf("mode %d: [%d] %s:\n", i, modes.modes[i], videoModeNames[modes.modes[i] - STARTVIDEOMODE]);
+			printf("  Mode %d: [%d] %s:\n", i, modes.modes[i], videoModeNames[modes.modes[i] - STARTVIDEOMODE]);
 			if (modes.modes[i] < DC1394_VIDEO_MODE_FORMAT7_MIN)
 				printSupportedFrameRates(camera, modes.modes[i]);
+			else if (modes.modes[i] >= DC1394_VIDEO_MODE_FORMAT7_MIN &&
+			         modes.modes[i] <= DC1394_VIDEO_MODE_FORMAT7_MAX) {
+				uint32_t w, h;
+				dc1394_format7_get_max_image_size(camera, modes.modes[i], &w, &h);
+				printf("    Max image size %ux%u\n", w, h);
+			}
+			printf("\n");
 		}
 	}
 }
@@ -463,7 +469,6 @@ void camera::printSupportedFrameRates(dc1394camera_t *camera, dc1394video_mode_t
 	if (err != DC1394_SUCCESS) 
 		fprintf(stderr, "ERROR getting supported framerates");
 	else {
-		printf("Print Supported frame rates for video mode: %s\n", videoModeNames[mode - STARTVIDEOMODE]);
 		for (unsigned int i = 0; i < rates.num; i++) {
 			printf("    FPS %d: [%d] %f\n", i, rates.framerates[i], videoFrameRates[rates.framerates[i] - STARTFRAMERATE]);
 		}
