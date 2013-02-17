@@ -12,7 +12,7 @@ BUILDDIR=build
 
 .PHONY: all clean doxygen
 
-all: example example_auto example_onthefly getCams
+all: example_basic example_auto example_onthefly getCams
 
 # EXECUTABLES FILES HERE:
 
@@ -21,17 +21,17 @@ getCams: src/getCams.cpp $(BUILDDIR)/camera.o
 	@mkdir -p build
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
 
-example: src/example.cpp $(BUILDDIR)/camera.o
+example_basic: src/examples/basic.cpp $(BUILDDIR)/camera.o
 	@echo "CC [$@]"
 	@mkdir -p build
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
 
-example_auto: src/example_auto.cpp $(BUILDDIR)/camera.o
+example_auto: src/examples/auto.cpp $(BUILDDIR)/camera.o
 	@echo "CC [$@]"
 	@mkdir -p build
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
 
-example_onthefly: src/example_onthefly.cpp $(BUILDDIR)/camera.o
+example_onthefly: src/examples/onthefly.cpp $(BUILDDIR)/camera.o
 	@echo "CC [$@]"
 	@mkdir -p build
 	@$(CXX) $? -o $(BUILDDIR)/$@ $(CXXFLAGS) $(CXXLD)
