@@ -68,6 +68,114 @@ int camera::open(const char* cam_guid) {
 	return 0;
 }
 
+std::vector<camera_info> camera::getConnectedCameras() {
+	dc1394error_t err;
+	dc1394camera_list_t *list;
+	dc1394_t *dc = NULL;
+
+
+	dc1394framerates_t rates;
+
+	std::vector<camera_info> cameras;
+	
+	dc = dc1394_new();
+	if (!dc) {
+		fprintf(stderr, "Can't initialize dc1394\n");
+		dc1394_free(dc);
+		return cameras;
+	}
+	
+	err = dc1394_camera_enumerate(dc, &list);
+	if (err != DC1394_SUCCESS) {
+		fprintf(stderr, "Failed to enumerate cameras\n");
+		dc1394_camera_free_list(list);
+		dc1394_free(dc);
+		return cameras;
+	}
+
+
+	
+	for (uint32_t c = 0; c < list->num; c++) {
+		uint64_t guid = list->ids[c].guid;
+		int unit = list->ids[c].unit;
+	
+		dc1394camera_t *camera = dc1394_camera_new_unit(dc, guid, unit);
+		if (!camera) {
+			fprintf(stderr, "Failed to get camera (GUID %016lX unit %d)\n", guid, unit);
+			dc1394_camera_free(camera);
+			continue;
+		}
+
+
+		/* Populate the camera_info struct */
+		camera_info cam_info;
+		cam_info.guid      = guid;
+		cam_info.unit      = unit;
+		cam_info.vendor_id = camera->vendor_id;
+		cam_info.model_id  = camera->model_id;
+
+		memset(cam_info.vendor, 0, sizeof(cam_info.vendor));
+		memset(cam_info.model,  0, sizeof(cam_info.model));
+		strncpy(cam_info.vendor, camera->vendor, sizeof(cam_info.vendor));
+		strncpy(cam_info.model,  camera->model,  sizeof(cam_info.model));
+
+
+		// Get the supported video modes
+		dc1394video_modes_t modes;
+		err = dc1394_video_get_supported_modes(camera, &modes);
+		
+		if (err != DC1394_SUCCESS) {
+			fprintf(stderr, "Failed to get video modes for camera (GUID %016lX unit %d)\n", guid, unit);
+			dc1394_camera_free(camera);
+			continue;
+		}
+
+		for (uint32_t m = 0; m < modes.num; m++) {
+			video_mode mode_info;
+
+			mode_info.mode = modes.modes[m];
+
+			if (mode_info.mode < DC1394_VIDEO_MODE_FORMAT7_MIN) {
+				// Get framerates
+				mode_info.format7 = false;
+				err = dc1394_video_get_supported_framerates(camera, mode_info.mode, &rates);
+	
+				if (err != DC1394_SUCCESS) {
+					fprintf(stderr, "Failed to get framerates for camera (GUID %016lX unit %d)\n", guid, unit);
+					goto skipCam;
+				}
+
+				for (uint32_t f = 0; f < rates.num; f++) {
+					mode_info.framerates.push_back(rates.framerates[f]);
+				}
+			} else if (mode_info.mode >= DC1394_VIDEO_MODE_FORMAT7_MIN &&
+					   mode_info.mode <= DC1394_VIDEO_MODE_FORMAT7_MAX) {
+				// Get format 7 mode
+				mode_info.format7 = true;
+				err = dc1394_format7_get_mode_info(camera, mode_info.mode, &mode_info.format7_mode);
+
+				if (err != DC1394_SUCCESS) {
+					fprintf(stderr, "Failed to get format 7 mode for camera (GUID %016lX unit %d)\n", guid, unit);
+					goto skipCam;
+				}
+			}
+
+			cam_info.modes.push_back(mode_info);
+		}
+
+		cameras.push_back(cam_info);
+
+skipCam:
+		dc1394_camera_free(camera);
+	}
+	
+	dc1394_camera_free_list(list);
+	dc1394_free(dc);
+
+	return cameras;
+}
+
+
 void camera::printConnectedCams() {
 	dc1394error_t err;
 	dc1394camera_list_t *list;
@@ -742,6 +850,17 @@ int camera::setFrameRate(float fps) {
 	}
 
 	return 0;
+}
+
+char *camera::videoModeString(dc1394video_mode_t m) const {
+	const char *name = videoModeNames[m - STARTVIDEOMODE];
+	char *str = new char[strlen(name)];
+	strcpy(str, name);
+	return str;
+}
+
+float camera::frameRateValue(dc1394framerate_t f) const {
+	return videoFrameRates[f - STARTFRAMERATE];
 }
 
 void camera::printVideoMode() {
