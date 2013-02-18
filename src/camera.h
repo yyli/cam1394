@@ -22,12 +22,14 @@
  */
 #ifndef CAMERA_H
 #define CAMERA_H
-#include <dc1394/dc1394.h>
 
+#include <dc1394/dc1394.h>
 #ifndef NOOPENCV
 #include <cv.h>
 #include <highgui.h>
 #endif
+
+#include <vector>
 
 //! Contains the camera class definition and other misc variables
 namespace cam1394
@@ -50,6 +52,29 @@ namespace cam1394
 
 			return 0;
 		}
+	};
+
+	struct video_mode {
+		dc1394video_mode_t mode;
+		std::vector<dc1394framerate_t> framerates;
+
+		bool format7;
+		dc1394format7mode_t format7_mode;
+	};
+
+	struct camera_info {
+		uint64_t guid;
+		int unit;
+
+		uint32_t vendor_id;
+		uint32_t model_id;
+		char vendor[257];
+		char model[257];
+		
+		std::vector<video_mode> modes;
+		size_t preferred_mode;
+		size_t preferred_framerate;
+		//TODO: preferred format7 settings
 	};
 
 	/*! 
@@ -189,8 +214,13 @@ namespace cam1394
 		int setVideoMode(const char*);
 		int setFrameRate(float fps);
 
+		char *videoModeString(dc1394video_mode_t m) const;
+		float frameRateValue(dc1394framerate_t f) const;
+
 		void printFrameRate();
 		void printVideoMode();
+
+		std::vector<camera_info> getConnectedCameras();
 
 	private:
 		uint64_t guid;
