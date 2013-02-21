@@ -29,6 +29,7 @@
 
 using namespace cam1394;
 
+
 /* defualt constructor */
 camera::camera() : guid(0), width(-1), height(-1), cam(NULL) {}
 
@@ -934,17 +935,6 @@ int camera::setFrameRate(float fps) {
 	}
 
 	return 0;
-}
-
-char *camera::videoModeString(dc1394video_mode_t m) const {
-	const char *name = videoModeNames[m - STARTVIDEOMODE];
-	char *str = new char[strlen(name)];
-	strcpy(str, name);
-	return str;
-}
-
-float camera::frameRateValue(dc1394framerate_t f) const {
-	return videoFrameRates[f - STARTFRAMERATE];
 }
 
 void camera::printVideoMode() {

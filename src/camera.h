@@ -24,6 +24,7 @@
 #define CAMERA_H
 
 #include <dc1394/dc1394.h>
+
 #ifndef NOOPENCV
 #include <cv.h>
 #include <highgui.h>
@@ -31,9 +32,28 @@
 
 #include <vector>
 
+
+
 //! Contains the camera class definition and other misc variables
 namespace cam1394
 {
+	extern const int STARTVIDEOMODE;
+	extern const char *videoModeNames[];
+	extern const int STARTFRAMERATE;
+	extern const float videoFrameRates[];
+	extern const int STARTBAYERMETHODS;
+	extern const char *bayerMethods[];
+	extern const int STARTCOLORFILTER;
+	extern const char *bayerPatterns[];
+
+	inline const char *videoModeString(dc1394video_mode_t m) {
+		return videoModeNames[m - STARTVIDEOMODE];
+	}
+	inline float frameRateValue(dc1394framerate_t f) {
+		return videoFrameRates[f - STARTFRAMERATE];
+	}
+
+
 	struct cam1394Image {
 		char *data;
 		int width;
@@ -60,6 +80,14 @@ namespace cam1394
 
 		bool format7;
 		dc1394format7mode_t format7_mode;
+
+		video_mode() {}
+		video_mode(const video_mode &v) {
+			mode = v.mode;
+			framerates = v.framerates;
+			format7 = v.format7;
+			format7_mode = format7_mode;
+		}
 	};
 
 	struct camera_info {
@@ -72,9 +100,22 @@ namespace cam1394
 		char model[257];
 		
 		std::vector<video_mode> modes;
-		size_t preferred_mode;
-		size_t preferred_framerate;
+		uint32_t preferred_mode;
+		uint32_t preferred_framerate;
 		//TODO: preferred format7 settings
+
+		camera_info() {}
+		camera_info(const camera_info &c) {
+			guid = c.guid;
+			unit = c.unit;
+			vendor_id = c.vendor_id;
+			model_id  = c.model_id;
+			memcpy(vendor, c.vendor, sizeof(vendor));
+			memcpy(model, c.model, sizeof(model));
+			modes = c.modes;
+			preferred_mode      = c.preferred_mode;
+			preferred_framerate = c.preferred_framerate;
+		}
 	};
 
 	/*! 
@@ -213,9 +254,6 @@ namespace cam1394
 
 		int setVideoMode(const char*);
 		int setFrameRate(float fps);
-
-		char *videoModeString(dc1394video_mode_t m) const;
-		float frameRateValue(dc1394framerate_t f) const;
 
 		void printFrameRate();
 		void printVideoMode();
