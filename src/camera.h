@@ -80,14 +80,6 @@ namespace cam1394
 
 		bool format7;
 		dc1394format7mode_t format7_mode;
-
-		video_mode() {}
-		video_mode(const video_mode &v) {
-			mode = v.mode;
-			framerates = v.framerates;
-			format7 = v.format7;
-			format7_mode = format7_mode;
-		}
 	};
 
 	struct camera_info {
@@ -103,19 +95,6 @@ namespace cam1394
 		uint32_t preferred_mode;
 		uint32_t preferred_framerate;
 		//TODO: preferred format7 settings
-
-		camera_info() {}
-		camera_info(const camera_info &c) {
-			guid = c.guid;
-			unit = c.unit;
-			vendor_id = c.vendor_id;
-			model_id  = c.model_id;
-			memcpy(vendor, c.vendor, sizeof(vendor));
-			memcpy(model, c.model, sizeof(model));
-			modes = c.modes;
-			preferred_mode      = c.preferred_mode;
-			preferred_framerate = c.preferred_framerate;
-		}
 	};
 
 	/*! 
