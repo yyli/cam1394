@@ -52,6 +52,9 @@ namespace cam1394
 	inline float frameRateValue(dc1394framerate_t f) {
 		return videoFrameRates[f - STARTFRAMERATE];
 	}
+	inline const char *bayerPatternString(dc1394color_filter_t c) {
+		return bayerPatterns[c - STARTCOLORFILTER];
+	}
 
 
 	struct cam1394Image {
@@ -78,6 +81,10 @@ namespace cam1394
 		dc1394video_mode_t mode;
 		std::vector<dc1394framerate_t> framerates;
 
+		bool raw;
+		bool raw_control;
+		dc1394color_filter_t bayer_pattern;
+
 		bool format7;
 		dc1394format7mode_t format7_mode;
 	};
@@ -90,10 +97,14 @@ namespace cam1394
 		uint32_t model_id;
 		char vendor[257];
 		char model[257];
+
+		bool raw_control;
 		
 		std::vector<video_mode> modes;
+
 		uint32_t preferred_mode;
 		uint32_t preferred_framerate;
+		bool     preferred_raw;
 		//TODO: preferred format7 settings
 	};
 

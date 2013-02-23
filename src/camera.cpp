@@ -126,6 +126,20 @@ std::vector<camera_info> camera::getConnectedCameras() {
 		strncpy(cam_info.model,  camera->model,  sizeof(cam_info.model));
 
 
+		dc1394video_mode_t cur_mode;
+		uint32_t cur_bayer_out_reg = 0;
+
+		if (DC1394_SUCCESS != dc1394_get_control_registers(camera, 0x1050, &cur_bayer_out_reg, 1)) {
+			fprintf(stderr, "Failed to get BAYER_MONO_CTRL register for camera (GUID %016lX unit %d)\n", guid, unit);
+			goto skipCam;
+		}
+
+		if (cur_bayer_out_reg & 0x80000000)
+			cam_info.raw_control = true;
+		else
+			cam_info.raw_control = false;
+
+
 		// Get the supported video modes
 		dc1394video_modes_t modes;
 		err = dc1394_video_get_supported_modes(camera, &modes);
@@ -136,10 +150,107 @@ std::vector<camera_info> camera::getConnectedCameras() {
 			continue;
 		}
 
+		if (DC1394_SUCCESS != dc1394_video_get_mode(camera, &cur_mode)) {
+			fprintf(stderr, "Failed to get current video mode for camera (GUID %016lX unit %d)\n", guid, unit);
+			goto skipCam;
+		}
+
+
 		for (uint32_t m = 0; m < modes.num; m++) {
 			video_mode mode_info;
 
 			mode_info.mode = modes.modes[m];
+
+
+			if (DC1394_SUCCESS != dc1394_video_set_mode(camera, mode_info.mode)) {
+				fprintf(stderr, "Failed to set video mode for camera (GUID %016lX unit %d)\n", guid, unit);
+				goto skipCam;
+			}
+
+
+			uint32_t bayer_out_off = 0x80000000;
+			uint32_t bayer_out_on  = 0x80000001;
+			uint32_t bayer_reg_off = 0;
+			uint32_t bayer_reg_on  = 0;
+			dc1394color_filter_t bayer_pat;
+
+			if (cam_info.raw_control) {
+				if (DC1394_SUCCESS != dc1394_set_control_registers(camera, 0x1050, &bayer_out_off, 1)) {
+					fprintf(stderr, "Failed to set BAYER_MONO_CTRL register for camera (GUID %016lX unit %d)\n", guid, unit);
+					goto skipCam;
+				}
+			}
+
+			if (DC1394_SUCCESS != dc1394_get_control_registers(camera, 0x1040, &bayer_reg_off, 1)) {
+				fprintf(stderr, "Failed to get BAYER_TILE_MAPPING register for camera (GUID %016lX unit %d)\n", guid, unit);
+				goto skipCam;
+			}
+
+			if (cam_info.raw_control) {
+				if (DC1394_SUCCESS != dc1394_set_control_registers(camera, 0x1050, &bayer_out_on, 1)) {
+					fprintf(stderr, "Failed to set BAYER_MONO_CTRL register for camera (GUID %016lX unit %d)\n", guid, unit);
+					goto skipCam;
+				}
+
+				if (DC1394_SUCCESS != dc1394_get_control_registers(camera, 0x1040, &bayer_reg_on, 1)) {
+					fprintf(stderr, "Failed to get BAYER_TILE_MAPPING register for camera (GUID %016lX unit %d)\n", guid, unit);
+					goto skipCam;
+				}
+			}
+
+			switch (bayer_reg_off) {
+				case 0x52474742:
+					mode_info.raw = true;
+					bayer_pat = DC1394_COLOR_FILTER_RGGB;
+					break;
+				case 0x47425247:
+					mode_info.raw = true;
+					bayer_pat = DC1394_COLOR_FILTER_GBRG;
+					break;
+				case 0x47524247:
+					mode_info.raw = true;
+					bayer_pat = DC1394_COLOR_FILTER_GRBG;
+					break;
+				case 0x42474752:
+					mode_info.raw = true;
+					bayer_pat = DC1394_COLOR_FILTER_BGGR;
+					break;
+				case 0x59595959:
+				default:
+					mode_info.raw = false;
+			}
+
+			mode_info.raw_control = false;
+			if (cam_info.raw_control) {
+				switch (bayer_reg_on) {
+					case 0x52474742:
+						mode_info.raw = true;
+						bayer_pat = DC1394_COLOR_FILTER_RGGB;
+						break;
+					case 0x47425247:
+						mode_info.raw = true;
+						bayer_pat = DC1394_COLOR_FILTER_GBRG;
+						break;
+					case 0x47524247:
+						mode_info.raw = true;
+						bayer_pat = DC1394_COLOR_FILTER_GRBG;
+						break;
+					case 0x42474752:
+						mode_info.raw = true;
+						bayer_pat = DC1394_COLOR_FILTER_BGGR;
+						break;
+					case 0x59595959:
+					default:
+						mode_info.raw = false;
+				}
+
+				if (mode_info.raw && bayer_reg_off != bayer_reg_on)
+					mode_info.raw_control = true;
+			}
+
+			if (mode_info.raw)
+				mode_info.bayer_pattern = bayer_pat;
+
 
 			if (mode_info.mode < DC1394_VIDEO_MODE_FORMAT7_MIN) {
 				// Get framerates
@@ -154,6 +265,7 @@ std::vector<camera_info> camera::getConnectedCameras() {
 				for (uint32_t f = 0; f < rates.num; f++) {
 					mode_info.framerates.push_back(rates.framerates[f]);
 				}
+
 			} else if (mode_info.mode >= DC1394_VIDEO_MODE_FORMAT7_MIN &&
 					   mode_info.mode <= DC1394_VIDEO_MODE_FORMAT7_MAX) {
 				// Get format 7 mode
@@ -167,6 +279,13 @@ std::vector<camera_info> camera::getConnectedCameras() {
 			}
 
 			cam_info.modes.push_back(mode_info);
+		}
+
+		if (DC1394_SUCCESS != dc1394_set_control_registers(camera, 0x1050, &cur_bayer_out_reg, 1)) {
+			fprintf(stderr, "Failed to reset BAYER_MONO_CTRL register for camera (GUID %016lX unit %d)\n", guid, unit);
+		}
+		if (DC1394_SUCCESS != dc1394_video_set_mode(camera, cur_mode)) {
+			fprintf(stderr, "Failed to reset video mode for camera (GUID %016lX unit %d)\n", guid, unit);
 		}
 
 		cameras.push_back(cam_info);
