@@ -61,7 +61,7 @@ int camera::open(const char* cam_guid) {
 				  videoFrameRates[rate - STARTFRAMERATE], NULL, NULL) < 0) {
 		clean_up();
 		return -1;	
-	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 10, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
 		fprintf(stderr, "ERROR: Failed to setup camera\n");
 		return -1;	
@@ -450,7 +450,7 @@ int camera::open(const char* cam_guid, const char* video_mode, float fps, const 
 	if (initParam(video_mode, fps, method, pattern) < 0) {
 		clean_up();
 		return -1;	
-	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+	} else if (DC1394_SUCCESS != dc1394_capture_setup(cam, 10, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
 		fprintf(stderr, "ERROR: Failed to setup camera\n");
 		return -1;	
@@ -839,6 +839,35 @@ int camera::setWhiteBalance(unsigned int b_u, unsigned int r_v)
 	return 0;
 }
 
+int camera::setRawOutput(bool raw)
+{
+	uint32_t cur_bayer_out = 0;
+	uint32_t set_bayer_out;
+
+	if (DC1394_SUCCESS != dc1394_get_control_registers(cam, 0x1050, &cur_bayer_out, 1)) {
+		fprintf(stderr, "ERROR: Failed to get BAYER_MONO_CTRL register");
+		return -1;
+	}
+
+	if ((cur_bayer_out & 0x80000000) == 0) {
+		fprintf(stderr, "ERROR: raw output control not supported\n");
+		return -1;
+	}
+
+
+	if (raw)
+		set_bayer_out = 0x80000001;
+	else
+		set_bayer_out = 0x80000000;
+
+	if (DC1394_SUCCESS != dc1394_set_control_registers(cam, 0x1050, &set_bayer_out, 1)) {
+		fprintf(stderr, "ERROR: Failed to set BAYER_MONO_CTRL register\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 int camera::read(cam1394Image* image) {
 	if (!cam)
 	{
@@ -1015,7 +1044,7 @@ int camera::setVideoMode(const char* video_mode) {
 	if ((ret = _setVideoMode(video_mode)) < 0)
 		return ret;
 
-	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 10, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
 		fprintf(stderr, "ERROR: Failed to start capture\n");
 		return -1;	
@@ -1043,7 +1072,7 @@ int camera::setFrameRate(float fps) {
 	if ((ret = _setFrameRate(fps)) < 0)
 		return ret;
 
-	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 40, DC1394_CAPTURE_FLAGS_DEFAULT)) {
+	if (DC1394_SUCCESS != dc1394_capture_setup(cam, 10, DC1394_CAPTURE_FLAGS_DEFAULT)) {
 		clean_up();
 		fprintf(stderr, "ERROR: Failed to start capture\n");
 		return -1;	

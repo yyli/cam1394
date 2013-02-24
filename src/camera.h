@@ -206,6 +206,8 @@ namespace cam1394
 		 */
 		int setWhiteBalance(unsigned int b_u, unsigned int r_v);
 
+		int setRawOutput(bool raw);
+
 		/*!\brief gets the timestamp of the last frame
 		 * \return timestamp in milliseconds (ms)
 		 */
