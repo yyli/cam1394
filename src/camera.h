@@ -101,11 +101,6 @@ namespace cam1394
 		bool raw_control;
 		
 		std::vector<video_mode> modes;
-
-		uint32_t preferred_mode;
-		uint32_t preferred_framerate;
-		bool     preferred_raw;
-		//TODO: preferred format7 settings
 	};
 
 	/*! 

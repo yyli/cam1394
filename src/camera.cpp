@@ -201,19 +201,19 @@ std::vector<camera_info> camera::getConnectedCameras() {
 			switch (bayer_reg_off) {
 				case 0x52474742:
 					mode_info.raw = true;
-					bayer_pat = DC1394_COLOR_FILTER_RGGB;
+					bayer_pat = DC1394_COLOR_FILTER_BGGR;
 					break;
 				case 0x47425247:
 					mode_info.raw = true;
-					bayer_pat = DC1394_COLOR_FILTER_GBRG;
+					bayer_pat = DC1394_COLOR_FILTER_GRBG;
 					break;
 				case 0x47524247:
 					mode_info.raw = true;
-					bayer_pat = DC1394_COLOR_FILTER_GRBG;
+					bayer_pat = DC1394_COLOR_FILTER_GBRG;
 					break;
 				case 0x42474752:
 					mode_info.raw = true;
-					bayer_pat = DC1394_COLOR_FILTER_BGGR;
+					bayer_pat = DC1394_COLOR_FILTER_RGGB;
 					break;
 				case 0x59595959:
 				default:
@@ -225,19 +225,19 @@ std::vector<camera_info> camera::getConnectedCameras() {
 				switch (bayer_reg_on) {
 					case 0x52474742:
 						mode_info.raw = true;
-						bayer_pat = DC1394_COLOR_FILTER_RGGB;
+						bayer_pat = DC1394_COLOR_FILTER_BGGR;
 						break;
 					case 0x47425247:
 						mode_info.raw = true;
-						bayer_pat = DC1394_COLOR_FILTER_GBRG;
+						bayer_pat = DC1394_COLOR_FILTER_GRBG;
 						break;
 					case 0x47524247:
 						mode_info.raw = true;
-						bayer_pat = DC1394_COLOR_FILTER_GRBG;
+						bayer_pat = DC1394_COLOR_FILTER_GBRG;
 						break;
 					case 0x42474752:
 						mode_info.raw = true;
-						bayer_pat = DC1394_COLOR_FILTER_BGGR;
+						bayer_pat = DC1394_COLOR_FILTER_RGGB;
 						break;
 					case 0x59595959:
 					default:
