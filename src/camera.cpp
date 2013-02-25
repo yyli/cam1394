@@ -26,6 +26,7 @@
 
 #include "camera.h"
 #include "cameraconstants.h"
+	
 
 using namespace cam1394;
 
@@ -924,7 +925,7 @@ int camera::read(cam1394Image* image) {
 		image->width  = end.size[0];
 		image->height = end.size[1];
 		image->size   = end.image_bytes;
-		image->data   = new char[image->size]();
+		image->data   = new uchar[image->size]();
 		memcpy(image->data, end.image, image->size);
 	} else {
 		if (image->data != NULL)
@@ -932,7 +933,7 @@ int camera::read(cam1394Image* image) {
 		image->width  = prev_frame->size[0];
 		image->height = prev_frame->size[1];
 		image->size   = prev_frame->image_bytes;
-		image->data   = new char[image->size]();
+		image->data   = new uchar[image->size]();
 		memcpy(image->data, prev_frame->image, image->size);
 	}
 

@@ -58,7 +58,7 @@ namespace cam1394
 
 
 	struct cam1394Image {
-		char *data;
+		uchar *data;
 		int width;
 		int height;
 		int size;
