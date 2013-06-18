@@ -18,7 +18,7 @@
 /*!
  * \file camera.h
  *
- * \author Yiying Li
+ * \author Yiying Li and Dylan Davis
  */
 #ifndef CAMERA_H
 #define CAMERA_H
@@ -37,6 +37,7 @@
 //! Contains the camera class definition and other misc variables
 namespace cam1394
 {
+	// External constants for conversion between ENUMs and Values
 	extern const int STARTVIDEOMODE;
 	extern const char *videoModeNames[];
 	extern const int STARTFRAMERATE;
@@ -46,6 +47,7 @@ namespace cam1394
 	extern const int STARTCOLORFILTER;
 	extern const char *bayerPatterns[];
 
+	// Inline functions that return the Value based on the ENUM
 	inline const char *videoModeString(dc1394video_mode_t m) {
 		return videoModeNames[m - STARTVIDEOMODE];
 	}
@@ -56,11 +58,17 @@ namespace cam1394
 		return bayerPatterns[c - STARTCOLORFILTER];
 	}
 
-
+	
+	/*!\brief Structure for holding images grabbed from the camera
+	 */
 	struct cam1394Image {
+		/*!\brief Unsigned char buffer containing the raw image */
 		uchar *data;
+		/*!\brief Width of the image in pixels */
 		int width;
+		/*!\brief Height of the image in pixels */
 		int height;
+		/*!\brief Size of the \link data \endlink buffer */
 		int size;
 
 		cam1394Image() : data(NULL) {}
@@ -77,35 +85,48 @@ namespace cam1394
 		}
 	};
 
+	/*!\brief Structure for defining a specific Video Mode
+	 */
 	struct video_mode {
 		dc1394video_mode_t mode;
+
+		/*!\brief Vector of possible framerates for the \link mode \endlink video mode */
 		std::vector<dc1394framerate_t> framerates;
 
+		/*!\brief Is the camera outputting raw images */
 		bool raw;
+		/*!\brief Is there control over whether the camera outputs raw images */
 		bool raw_control;
+		/*!\brief The bayer pattern that the camera thinks it is using */
 		dc1394color_filter_t bayer_pattern;
 
 		bool format7;
 		dc1394format7mode_t format7_mode;
 	};
 
+	/*!\brief Structure containing information about a camera
+	 */
 	struct camera_info {
 		uint64_t guid;
 		int unit;
 
 		uint32_t vendor_id;
 		uint32_t model_id;
+		/*!\brief Char array containing the name of the vendor */
 		char vendor[257];
+		/*!\brief Char array containing the model of the camera */
 		char model[257];
 
+		/*!\brief Is there control over whether the camera outputs raw images */
 		bool raw_control;
-		
+	
+		/*!\brief All the possible video modes for this camera */	
 		std::vector<video_mode> modes;
 	};
 
 	/*! 
 	 * \class camera
-	 * \brief reads and writes from a FireWire 1394 or Point Grey camera
+	 * \brief Reads and writes from a FireWire 1394 or Point Grey camera
 	 */
 	class camera
 	{
@@ -136,7 +157,7 @@ namespace cam1394
 		 * \param cam_guid		NONE will pick the first available camera, 
 		 * 						else use the GUID printed by #printGUID
 		 * \param video_mode	This is a string from one of the following 
-		 * 						\link cameraconstants.h::videoModeNames \endlink
+		 * 						\link cam1394::videoModeNames \endlink
 		 * \param fps			FPS value, floored to closest possible FPS
 		 * \param bayer 		CURRENTLY THIS DOES NOTHING
 		 * \param method 		CURRENTLY THIS DOES NOTHING
@@ -206,6 +227,10 @@ namespace cam1394
 		 */
 		int setWhiteBalance(unsigned int b_u, unsigned int r_v);
 
+		/*!\brief Sets whether the camera outputs raw
+		 * \param raw True is raw, False is grayscale
+		 * \return 0 if success, <0 if failure
+		 */
 		int setRawOutput(bool raw);
 
 		/*!\brief gets the timestamp of the last frame
@@ -232,9 +257,9 @@ namespace cam1394
 		
 		/*!\brief sets the debayering method and pattern
 		 * \param method the string name of the method from 
-		 * \link cameraconstant.h::bayerMethods \endlink
+		 * \link cam1394::bayerMethods \endlink
 		 * \param pattern the string name of the pattern from
-		 * \link cameraconstant.h::bayerPatterns \endlink
+		 * \link cam1394::bayerPatterns \endlink
 		 * \return 0 if success, <0 if failure
 		 */
 		int setBayer(const char* method, const char* pattern);
