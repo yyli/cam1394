@@ -913,13 +913,18 @@ int camera::read(cam1394Image* image) {
 	droppedframes = frames_read - 1;
 	prev_frame->color_filter= bayer_pat;
 
+	uint32_t bits = 0;
+
 	if (bayer_met != -1) {
 		if (DC1394_SUCCESS != dc1394_debayer_frames(prev_frame, &end, bayer_met))
 		{
 			fprintf(stderr, "ERROR: Unable to debayer frame\n");
 			return -1;
 		}
-
+	
+		dc1394_get_color_coding_bit_size(end.color_coding, &bits);
+		image->bits = bits;
+		
 		if (image->data != NULL)
 			image->destroy();
 		image->width  = end.size[0];
@@ -930,6 +935,10 @@ int camera::read(cam1394Image* image) {
 	} else {
 		if (image->data != NULL)
 			image->destroy();
+		
+		dc1394_get_color_coding_bit_size(prev_frame->color_coding, &bits);
+		image->bits = bits;
+		
 		image->width  = prev_frame->size[0];
 		image->height = prev_frame->size[1];
 		image->size   = prev_frame->image_bytes;

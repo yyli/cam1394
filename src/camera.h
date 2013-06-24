@@ -70,6 +70,8 @@ namespace cam1394
 		int height;
 		/*!\brief Size of the \link data \endlink buffer */
 		int size;
+		/*!\brief Bits per pixel */
+		unsigned int bits;
 
 		cam1394Image() : data(NULL) {}
 		/*!\brief destroys cam1394Image
